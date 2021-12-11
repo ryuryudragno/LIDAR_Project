@@ -215,40 +215,41 @@ if __name__ == "__main__":
     # print("Full registration ...")
     max_correspondence_distance_coarse = voxel_size * 15
     max_correspondence_distance_fine = voxel_size * 1.5
-    # with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
-    #     pose_graph = full_registration(
-    #         pcds_down,
-    #         max_correspondence_distance_coarse,
-    #         max_correspondence_distance_fine,
-    #     )
-    # print(pose_graph)
-    # # # 6
-    # print("Optimizing PoseGraph ...")
-    # option = o3.pipelines.registration.GlobalOptimizationOption(
-    #     max_correspondence_distance=max_correspondence_distance_fine,
-    #     edge_prune_threshold=0.25,
-    #     reference_node=0,
-    # )
-    # with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
-    #     o3.pipelines.registration.global_optimization(
-    #         pose_graph,
-    #         o3.pipelines.registration.GlobalOptimizationLevenbergMarquardt(),
-    #         o3.pipelines.registration.GlobalOptimizationConvergenceCriteria(),
-    #         option,
-    #     )
+    with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
+        pose_graph = full_registration(
+            pcds_down,
+            max_correspondence_distance_coarse,
+            max_correspondence_distance_fine,
+        )
+    print(pose_graph)
 
-    # # # 7
-    # print("Transform points and display")
-    # for point_id in range(len(pcds_down)):
-    #     print(pose_graph.nodes[point_id].pose)
-    #     pcds_down[point_id].transform(pose_graph.nodes[point_id].pose)
-    # # o3.visualization.draw_geometries(
-    #     pcds_down,
-    #     zoom=0.3412,
-    #     front=[0.4257, -0.2125, -0.8795],
-    #     lookat=[2.6172, 2.0475, 1.532],
-    #     up=[-0.0694, -0.9768, 0.2024],
-    # )
+    # # 6
+    print("Optimizing PoseGraph ...")
+    option = o3.pipelines.registration.GlobalOptimizationOption(
+        max_correspondence_distance=max_correspondence_distance_fine,
+        edge_prune_threshold=0.25,
+        reference_node=0,
+    )
+    with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
+        o3.pipelines.registration.global_optimization(
+            pose_graph,
+            o3.pipelines.registration.GlobalOptimizationLevenbergMarquardt(),
+            o3.pipelines.registration.GlobalOptimizationConvergenceCriteria(),
+            option,
+        )
+
+    # # 7
+    print("Transform points and display")
+    for point_id in range(len(pcds_down)):
+        print(pose_graph.nodes[point_id].pose)
+        pcds_down[point_id].transform(pose_graph.nodes[point_id].pose)
+    o3.visualization.draw_geometries(
+        pcds_down,
+        zoom=0.5412,
+        front=[0.4257, -0.2125, -0.8795],
+        lookat=[-1.6172, 4.0475, 1.532],
+        up=[-0.0694, -0.9768, 0.2024],
+    )
 
     # result_ransac = execute_global_registration(
     #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
