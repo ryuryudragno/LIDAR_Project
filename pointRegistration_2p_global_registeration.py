@@ -46,8 +46,8 @@ def prepare_dataset(voxel_size):
     print("Loading files")
     # sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
     # targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
-    sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680102.csv")
-    targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680103.csv")
+    sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
+    targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680102.csv")
 
     # remove outliers which are further away then 10 meters
     dist_sourceData = calc_distance(sourceData)
@@ -77,11 +77,6 @@ def prepare_dataset(voxel_size):
     ).transpose()
     target.points = o3.utility.Vector3dVector(targetMatrix)
 
-    # trans_init = np.asarray([[0.0, 0.0, 1.0, 0.0], [1.0, 0.0, 0.0, 0.0],
-    #                          [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
-    # source.transform(trans_init)
-    # draw_registration_result(source, target, np.identity(4))
-
     source_down, source_fpfh = preprocess_point_cloud(source, voxel_size)
     target_down, target_fpfh = preprocess_point_cloud(target, voxel_size)
     return source, target, source_down, target_down, source_fpfh, target_fpfh
@@ -104,12 +99,12 @@ def execute_global_registration(
         o3.pipelines.registration.TransformationEstimationPointToPoint(False),
         3,
         [
-            o3.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
+            o3.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.99),
             o3.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
                 distance_threshold
             ),
         ],
-        o3.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999),
+        o3.pipelines.registration.RANSACConvergenceCriteria(100000, 0.9),
     )
     return result
 

@@ -4,6 +4,11 @@ import open3d as o3
 import numpy as np
 import copy
 
+# 複数点
+# http://www.open3d.org/docs/0.13.0/tutorial/pipelines/multiway_registration.html
+# Global registartion
+# http://www.open3d.org/docs/0.13.0/tutorial/pipelines/global_registration.html
+
 
 def calc_distance(inputFrame):
     return (inputFrame["X"] ** 2 + inputFrame["Y"] ** 2 + inputFrame["Z"] ** 2) ** 0.5
@@ -201,8 +206,9 @@ if __name__ == "__main__":
     voxel_size = 0.05  # means 5cm for the dataset
     pcds_down = prepare_dataset(voxel_size)
 
-    print("\npcd_downsは\n")
-    print(pcds_down[0])
+    # 入力の点群を準備したやつ表示
+    # print("\npcd_downsは\n")
+    # print(pcds_down)
     o3.visualization.draw_geometries(
         pcds_down,
         zoom=0.5412,

@@ -1,0 +1,15 @@
+py3d-0.0.12.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+py3d-0.0.12.dist-info/METADATA,sha256=FUG62z7KMT1Iwbtk3A6uBIy21c3iyv_ddSKRU1K9M3o,18702
+py3d-0.0.12.dist-info/RECORD,,
+py3d-0.0.12.dist-info/REQUESTED,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
+py3d-0.0.12.dist-info/WHEEL,sha256=ewwEueio1C2XeHTvT17n8dZUJgOvyCWCt0WVNLClP9o,92
+py3d-0.0.12.dist-info/top_level.txt,sha256=4FlxjVWKBmgtfYWCX2ZDGPpHIDerM_D2THqW4OT5GWc,5
+py3d/__init__.py,sha256=IFTBv0SPpMwYtZOYMQoI2s4JX3mQKRM9GYS_K7e1_n0,46
+py3d/__pycache__/__init__.cpython-39.pyc,,
+py3d/__pycache__/core.cpython-39.pyc,,
+py3d/__pycache__/server.cpython-39.pyc,,
+py3d/core.py,sha256=q1xB8SIk-pn6lMge_xAsOfq9aZ0H7ItPv1rUbhLJoSk,22244
+py3d/server.py,sha256=tJgj3ntGRijKlLYN-l_joOH8gxlIRoP7P1fRj30rSL4,5028
+py3d/static/bundle.js,sha256=Vxt7k2R54c_bAgzZg8v_JakNSbLwqwto1UG56duuXrc,1347148
+py3d/static/logo.png,sha256=fMUYELYZC1IHLe7aZu94AiUm3AyJcF3JTG7qSqOgJDY,4550
+py3d/viewer.html,sha256=NbYVugqTGVDqFlZGmwM_wYycuCqHJudAkVd4rFMmRwk,527

@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import csv
+import sys
 
 from pandas.io.parsers import read_csv
 
@@ -9,8 +10,10 @@ data = os.listdir("datasets_lidar/chair")  # get chair folder
 
 dfs = []
 
-for i in range(4):
-    print(i)
+print(sys.path)
+
+# for i in range(4):
+#     print(i)
 
 # for file_name in data:
 #     # print(file_name)
