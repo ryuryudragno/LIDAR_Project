@@ -1,7 +1,11 @@
+from datetime import time
 import pandas as pd
 import open3d as o3
 import numpy as np
 import copy
+import math
+
+# import euler
 
 
 def calc_distance(inputFrame):
@@ -49,11 +53,11 @@ def prepare_dataset(voxel_size):
     sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
     targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680102.csv")
 
-    # remove outliers which are further away then 10 meters
+    ## remove outliers which are further away then 10 meters
     dist_sourceData = calc_distance(sourceData)
     dist_targetData = calc_distance(targetData)
 
-    dist_threshold = 20
+    dist_threshold = 10  # 閾値
     sourceData = sourceData.iloc[
         np.nonzero((dist_sourceData < dist_threshold).values)[0], :
     ]
@@ -61,13 +65,53 @@ def prepare_dataset(voxel_size):
         np.nonzero((dist_targetData < dist_threshold).values)[0], :
     ]
 
+    # Rotate around the x-axis
+    # trans_init = np.asarray(
+    #     [
+    #         [1, 0, 0],
+    #         [0, 1 / 2, -math.sqrt(3) / 2],
+    #         [0.0, math.sqrt(3) / 2, 1 / 2],
+    #     ]
+    # )
+    # Rotate around the y-axis
+    trans_init = np.asarray(
+        [
+            [math.sqrt(2) / 2, 0, math.sqrt(2) / 2],
+            [0.0, 1, 0.0],
+            [-math.sqrt(2) / 2, 0.0, math.sqrt(2) / 2],
+        ]
+    )
+    # # Rotate around the z-axis
+    # trans_init = np.asarray(
+    #     [
+    #         [1 / 2, -math.sqrt(3) / 2, 0],
+    #         [math.sqrt(3) / 2, 1 / 2, 0.0],
+    #         [0.0, 0.0, 1.0],
+    #     ]
+    # )
+
+    # y軸周りに45度
+    # trans_init = np.asarray(
+    #     [
+    #         [1 / 2, 0.0, math.sqrt(3) / 2, 0.0],
+    #         [0.0, 1.0, 0.0, 0.0],
+    #         [-math.sqrt(3) / 2, 0.0, 1 / 2, 0.0],
+    #         [0.0, 0.0, 0.0, 1.0],
+    #     ]
+    # )
+
     # source data
     print("Transforming source data")
-    source = o3.geometry.PointCloud()
-    sourceMatrix = np.array(
-        [sourceData["X"], sourceData["Y"], sourceData["Z"]]
-    ).transpose()
+    source = o3.geometry.PointCloud()  # 0pointの生成
+
+    sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
+    print(sourceMatrix)
+    sourceMatrix = np.dot(trans_init, sourceMatrix)
+    sourceMatrix = sourceMatrix.transpose()
+    print("a")
+    print(sourceMatrix)
     source.points = o3.utility.Vector3dVector(sourceMatrix)
+    # print(source.points)
 
     # target data
     print("Transforming target data")
@@ -77,6 +121,7 @@ def prepare_dataset(voxel_size):
     ).transpose()
     target.points = o3.utility.Vector3dVector(targetMatrix)
 
+    draw_registration_result(source, target, np.identity(4))
     source_down, source_fpfh = preprocess_point_cloud(source, voxel_size)
     target_down, target_fpfh = preprocess_point_cloud(target, voxel_size)
     return source, target, source_down, target_down, source_fpfh, target_fpfh
@@ -99,12 +144,32 @@ def execute_global_registration(
         o3.pipelines.registration.TransformationEstimationPointToPoint(False),
         3,
         [
-            o3.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.99),
+            o3.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
             o3.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
                 distance_threshold
             ),
         ],
-        o3.pipelines.registration.RANSACConvergenceCriteria(100000, 0.9),
+        o3.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999),
+    )
+    return result
+
+
+def execute_fast_global_registration(
+    source_down, target_down, source_fpfh, target_fpfh, voxel_size
+):
+    distance_threshold = voxel_size * 0.5
+    print(
+        ":: Apply fast global registration with distance threshold %.3f"
+        % distance_threshold
+    )
+    result = o3.pipelines.registration.registration_fast_based_on_feature_matching(
+        source_down,
+        target_down,
+        source_fpfh,
+        target_fpfh,
+        o3.pipelines.registration.FastGlobalRegistrationOption(
+            maximum_correspondence_distance=distance_threshold
+        ),
     )
     return result
 
@@ -138,9 +203,14 @@ if __name__ == "__main__":
     result_ransac = execute_global_registration(
         source_down, target_down, source_fpfh, target_fpfh, voxel_size
     )
-    # print(result_ransac)
-    print(source_down)
     draw_registration_result(source_down, target_down, result_ransac.transformation)
+    # print(result_ransac)
+    # print(source)
+    # print(target)
+    # print(source_down)
+    # print(target_down)
+    # print(source_fpfh)
+    # print(target_fpfh)
 
     # this does not work yet - error
     #
