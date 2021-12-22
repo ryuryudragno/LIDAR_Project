@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import csv
 import sys
+import open3d as o3
 
 from pandas.io.parsers import read_csv
 
@@ -10,7 +11,9 @@ data = os.listdir("datasets_lidar/chair")  # get chair folder
 
 dfs = []
 
-print(sys.path)
+# print(sys.path)
+source = o3.geometry.PointCloud()
+print(source)
 
 # for i in range(4):
 #     print(i)
