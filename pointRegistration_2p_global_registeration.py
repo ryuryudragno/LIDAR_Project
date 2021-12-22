@@ -6,24 +6,36 @@ import copy
 import math
 
 # import euler
+# command qで解除
 
 
 def calc_distance(inputFrame):
     return (inputFrame["X"] ** 2 + inputFrame["Y"] ** 2 + inputFrame["Z"] ** 2) ** 0.5
 
 
+def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
+    distance_cut = sourceData.iloc[
+        np.nonzero((dist_data < dist_threshold).values)[0], :
+    ]
+    preprocessed_data = distance_cut.iloc[
+        np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
+    ]
+
+    return preprocessed_data
+
+
 def draw_registration_result(source, target, transformation):
     source_temp = copy.deepcopy(source)
     target_temp = copy.deepcopy(target)
-    source_temp.paint_uniform_color([1, 0.706, 0])
-    target_temp.paint_uniform_color([0, 0.651, 0.929])
+    source_temp.paint_uniform_color([1, 0.506, 0])  # 100 is red
+    target_temp.paint_uniform_color([0, 0.651, 0.929])  # 101 is blue
     source_temp.transform(transformation)
     o3.visualization.draw_geometries(
         [source_temp, target_temp],
-        zoom=0.4559,
-        front=[0.6452, -0.3036, -0.7011],
+        zoom=0.6559,  # lager number, smaller object
+        front=[0.6452, 0.5036, 0.7011],
         lookat=[1.9892, 2.0208, 1.8945],
-        up=[-0.2779, -0.9482, 0.1556],
+        up=[-0.2779, -0.5482, 0.1556],
     )
 
 
@@ -50,78 +62,85 @@ def prepare_dataset(voxel_size):
     print("Loading files")
     sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
     targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
-    # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
-    # targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680102.csv")
+    # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
+    # targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
+    # sourceData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680100.csv")
+    # targetData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680101.csv")
+    # sourceData = pd.read_csv("datasets_lidar/crane/crane_1921680100.csv")
+    # targetData = pd.read_csv("datasets_lidar/crane/crane_1921680101.csv")
 
     ## remove outliers which are further away then 10 meters
     dist_sourceData = calc_distance(sourceData)
     dist_targetData = calc_distance(targetData)
 
-    dist_threshold = 6  # 閾値
-    sourceData = sourceData.iloc[
-        np.nonzero((dist_sourceData < dist_threshold).values)[0], :
-    ]
-    targetData = targetData.iloc[
-        np.nonzero((dist_targetData < dist_threshold).values)[0], :
-    ]
+    dist_threshold = 10  # 閾値
 
-    # Rotate around the x-axis
-    # trans_init = np.asarray(
-    #     [
-    #         [1, 0, 0],
-    #         [0, 1 / 2, -math.sqrt(3) / 2],
-    #         [0.0, math.sqrt(3) / 2, 1 / 2],
-    #     ]
-    # )
-    # Rotate around the y-axis
-    # trans_init = np.asarray(
-    #     [
-    #         [2 / math.sqrt(5), 0, 1 / math.sqrt(5)],
-    #         [0.0, 1, 0.0],
-    #         [-1 / math.sqrt(5), 0.0, 2 / math.sqrt(5)],
-    #     ]
-    # )
-    # Rotate around the z-axis
-    trans_init = np.asarray(
-        [
-            [2 / math.sqrt(5), -1 / math.sqrt(5), 0],
-            [1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
-            [0.0, 0.0, 1.0],
-        ]
-    )
+    # sourceData = sourceData.iloc[
+    #     np.nonzero((dist_sourceData < dist_threshold).values)[0], :
+    # ]
+    # sourceData = sourceData.iloc[np.nonzero((sourceData["Z"] > -0.35).values)[0], :]
 
-    # y軸周りに45度
-    # trans_init = np.asarray(
-    #     [
-    #         [1 / 2, 0.0, math.sqrt(3) / 2, 0.0],
-    #         [0.0, 1.0, 0.0, 0.0],
-    #         [-math.sqrt(3) / 2, 0.0, 1 / 2, 0.0],
-    #         [0.0, 0.0, 0.0, 1.0],
-    #     ]
-    # )
+    # targetData = targetData.iloc[
+    #     np.nonzero((dist_targetData < dist_threshold).values)[0], :
+    # ]
+    # targetData = targetData.iloc[np.nonzero((targetData["Z"] > -0.15).values)[0], :]
+
+    sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, -0.35)
+    targetData = z_cut(targetData, dist_targetData, dist_threshold, -0.15)
 
     # source data
     print("Transforming source data")
     source = o3.geometry.PointCloud()  # 0pointの生成
 
     sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
-    # print(sourceMatrix)
-    sourceMatrix = np.dot(trans_init, sourceMatrix)
-    sourceMatrix = sourceMatrix.transpose()
-    print("a")
-    print(sourceMatrix)
+    trans_init_100 = np.asarray(
+        [
+            [2 / math.sqrt(5), -1 / math.sqrt(5), 0],
+            [1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+    sourceMatrix = np.dot(trans_init_100, sourceMatrix)
+    print(len(sourceMatrix))
+    sourceMatrix = np.where(
+        (sourceMatrix[0] > -2) & (sourceMatrix[0] < 0), sourceMatrix, -100
+    )
+    sourceMatrix = np.where((sourceMatrix[1] < 3.5), sourceMatrix, -100)
+    sourceMatrix = sourceMatrix.T
+    sourceMatrix = sourceMatrix[np.all(sourceMatrix != -100, axis=1), :]
+
+    print(len(sourceMatrix))
     source.points = o3.utility.Vector3dVector(sourceMatrix)
     # print(source.points)
 
     # target data
     print("Transforming target data")
     target = o3.geometry.PointCloud()
-    targetMatrix = np.array(
-        [targetData["X"], targetData["Y"], targetData["Z"]]
-    ).transpose()
+    targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
+    trans_init_101 = np.asarray(
+        [
+            [2 / math.sqrt(5), 1 / math.sqrt(5), 0],
+            [-1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+    # rotate
+    targetMatrix = np.dot(trans_init_101, targetMatrix)
+
+    # 整理
+    targetMatrix = np.where(
+        (targetMatrix[0] > 0) & (targetMatrix[0] < 2), targetMatrix, -100
+    )
+    targetMatrix = np.where((targetMatrix[1] < 3.5), targetMatrix, -100)
+    targetMatrix = targetMatrix.T
+    targetMatrix = targetMatrix[np.all(targetMatrix != -100, axis=1), :]
+
     target.points = o3.utility.Vector3dVector(targetMatrix)
 
-    draw_registration_result(source, target, np.identity(4))
+    draw_registration_result(source, target, np.identity(4))  # 回転前
+
+    # draw_registration_result(source, target, np.identity(4))  # 回転後
+
     source_down, source_fpfh = preprocess_point_cloud(source, voxel_size)
     target_down, target_fpfh = preprocess_point_cloud(target, voxel_size)
     return source, target, source_down, target_down, source_fpfh, target_fpfh
@@ -203,7 +222,7 @@ if __name__ == "__main__":
     result_ransac = execute_global_registration(
         source_down, target_down, source_fpfh, target_fpfh, voxel_size
     )
-    # draw_registration_result(source_down, target_down, result_ransac.transformation)
+    draw_registration_result(source_down, target_down, result_ransac.transformation)
 
     # print(result_ransac)
     # print(source)

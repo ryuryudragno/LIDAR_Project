@@ -1,34 +1,15 @@
-import pandas as pd
-import os
-import csv
-import sys
-import open3d as o3
+import numpy as np
 
-from pandas.io.parsers import read_csv
+a = np.arange(12).reshape((3, 4))
 
-data = os.listdir("datasets_lidar/chair")  # get chair folder
-# print(data)
+# print(a[:, np.any(a < 5, axis=0)])
+# [[ 0  1  2  3]
+#  [ 4  5  6  7]
+#  [ 8  9 10 11]]
 
-dfs = []
+b = a[np.any(a < 5, axis=1)]
+# print(b)
 
-# print(sys.path)
-source = o3.geometry.PointCloud()
-print(source)
-
-# for i in range(4):
-#     print(i)
-
-# for file_name in data:
-#     # print(file_name)
-#     # ファイル名がcsvなら読み込む
-#     if file_name == "chair_1921680100.csv":
-#         # if file_name.endswith('.csv'):
-#         print(file_name)
-#         with open("datasets_lidar/chair/" + file_name) as f:
-#             print(f.read())
-#             # print(a)
-
-# dfs.append()
-
-# df = pd.concat(dfs)
-# print(df)
+# print(a[0])
+c = np.where((a[0] > 0) & (a[0] < 2), a, 0)
+print(c)

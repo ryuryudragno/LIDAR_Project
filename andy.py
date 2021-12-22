@@ -17,7 +17,7 @@ def draw_registration_result(source, target, transformation):
     source_temp.transform(transformation)
     o3.visualization.draw_geometries(
         [source_temp, target_temp],
-        zoom=0.4559,
+        zoom=0.6559,
         front=[0.6452, -0.3036, -0.7011],
         lookat=[1.9892, 2.0208, 1.8945],
         up=[-0.2779, -0.9482, 0.1556],
@@ -52,7 +52,7 @@ def prepare_dataset(voxel_size):
     dist_sourceData = calc_distance(sourceData)
     dist_targetData = calc_distance(targetData)
 
-    dist_threshold = 20
+    dist_threshold = 10
     sourceData = sourceData.iloc[
         np.nonzero((dist_sourceData < dist_threshold).values)[0], :
     ]
@@ -88,8 +88,8 @@ def prepare_dataset(voxel_size):
     draw_registration_result(source, target, np.identity(4))  # 回転前
     trans_init = np.asarray(
         [
-            [2 / math.sqrt(5), 1 / math.sqrt(5), 0.0, 0.0],
-            [-1 / math.sqrt(5), 2 / math.sqrt(5), 0.0, 0.0],
+            [1 / math.sqrt(5), -2 / math.sqrt(5), 0.0, 0.0],
+            [-2 / math.sqrt(5), 1 / math.sqrt(5), 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0],
         ]
