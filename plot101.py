@@ -4,20 +4,19 @@ from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 import open3d as o3
 import math
+import chair_parameter as param
 
 
 def calc_distance(inputFrame):
     return (inputFrame["X"] ** 2 + inputFrame["Y"] ** 2 + inputFrame["Z"] ** 2) ** 0.5
 
 
-targetData = pd.read_csv(
-    "datasets_lidar/rubishBinWithBricks/rubishBinWithBricks_1921680101.csv"
-)
+targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
 # targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
 # rubishBinWithBricks
 # twoBricks
 # boxPosition1
-# chairs
+# chair
 
 ## remove outliers which are further away then 10 meters
 dist_targetData = calc_distance(targetData)
@@ -26,9 +25,11 @@ dist_threshold = 10  # 閾値
 targetData = targetData.iloc[
     np.nonzero((dist_targetData < dist_threshold).values)[0], :
 ]
-targetData = targetData.iloc[np.nonzero((targetData["Z"] > -0.15).values)[0], :]
+targetData = targetData.iloc[
+    np.nonzero((targetData["Z"] > param.z_min_101).values)[0], :
+]
 targetData = targetData.iloc[np.nonzero((targetData["Z"] < 0.8).values)[0], :]
-targetData = targetData.iloc[np.nonzero((targetData["Y"] < 4.5).values)[0], :]
+targetData = targetData.iloc[np.nonzero((targetData["Y"] < 6.5).values)[0], :]
 
 # targetData = targetData.T
 # target data
@@ -37,31 +38,21 @@ targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
 # print((targetMatrix))
 
 
-trans_init_100 = np.asarray(
-    [
-        [2 / math.sqrt(5), -1 / math.sqrt(5), 0],
-        [1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
-        [0.0, 0.0, 1.0],
-    ]
-)
-trans_init_101 = np.asarray(
-    [
-        [2 / math.sqrt(5), 1 / math.sqrt(5), 0],
-        [-1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
-        [0.0, 0.0, 1.0],
-    ]
-)
+trans_init = param.trans_init_101
+
 # rotate
-targetMatrix = np.dot(trans_init_101, targetMatrix)
+targetMatrix = np.dot(trans_init, targetMatrix)
 
 # 整理
 targetMatrix = np.where(
-    (targetMatrix[0] > 0) & (targetMatrix[0] < 2), targetMatrix, -100
+    (targetMatrix[0] > param.x_min_101) & (targetMatrix[0] < param.x_max_101),
+    targetMatrix,
+    param.outlier,
 )
-targetMatrix = np.where((targetMatrix[1] < 3.5), targetMatrix, -100)
+targetMatrix = np.where((targetMatrix[1] < param.y_max), targetMatrix, param.outlier)
 
 targetMatrix = targetMatrix.T
-targetMatrix = targetMatrix[np.all(targetMatrix != -100, axis=1), :]
+targetMatrix = targetMatrix[np.all(targetMatrix != param.outlier, axis=1), :]
 print(targetMatrix)
 print(len(targetMatrix))
 

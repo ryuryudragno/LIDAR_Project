@@ -18,6 +18,7 @@ def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
     distance_cut = sourceData.iloc[
         np.nonzero((dist_data < dist_threshold).values)[0], :
     ]
+    distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
     preprocessed_data = distance_cut.iloc[
         np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
     ]
@@ -25,14 +26,17 @@ def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
     return preprocessed_data
 
 
-def source_preprocess(sourceData, trans_init, x_min, x_max, y_max, outlier):
+def source_preprocess(sourceData, trans_init, x_min, x_max, y, outlier):
     source = o3.geometry.PointCloud()  # generate point_cloud
     sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
     sourceMatrix = np.dot(trans_init, sourceMatrix)
     sourceMatrix = np.where(
         (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
     )
-    sourceMatrix = np.where((sourceMatrix[1] < y_max), sourceMatrix, outlier)
+    if y > 0:
+        sourceMatrix = np.where((sourceMatrix[1] < y), sourceMatrix, outlier)
+    else:
+        sourceMatrix = np.where((sourceMatrix[1] > y), sourceMatrix, outlier)
     sourceMatrix = sourceMatrix.T
     sourceMatrix = sourceMatrix[np.all(sourceMatrix != outlier, axis=1), :]
     source.points = o3.utility.Vector3dVector(sourceMatrix)
@@ -48,10 +52,6 @@ def draw_registration_result(source, target, transformation):
     source_temp.transform(transformation)
     o3.visualization.draw_geometries(
         [source_temp, target_temp],
-        zoom=0.6559,  # lager number, smaller object
-        front=[-0.6452, 0.5036, 0.7011],
-        lookat=[1.9892, 2.0208, 1.8945],
-        up=[-0.2779, -0.5482, 0.1556],
     )
 
 
@@ -76,8 +76,9 @@ def preprocess_point_cloud(pcd, voxel_size):
 def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
-    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
+    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680102.csv")
     targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
+
     # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
     # targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
     # sourceData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680100.csv")
@@ -91,14 +92,14 @@ def prepare_dataset(voxel_size):
 
     dist_threshold = 10  # 閾値
 
-    sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, -0.35)
-    targetData = z_cut(targetData, dist_targetData, dist_threshold, -0.15)
+    sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, param.z_min_100)
+    targetData = z_cut(targetData, dist_targetData, dist_threshold, param.z_min_101)
 
     # source data
     print("Transforming source data")
     source = source_preprocess(
         sourceData,
-        param.trans_init_100,
+        param.trans_init_102,
         param.x_min_100,
         param.x_max_100,
         param.y_max,
@@ -116,7 +117,7 @@ def prepare_dataset(voxel_size):
         param.outlier,
     )
 
-    # draw_registration_result(source, target, np.identity(4))  # 回転後
+    draw_registration_result(source, target, np.identity(4))  # 回転後
 
     source_down, source_fpfh = preprocess_point_cloud(source, voxel_size)
     target_down, target_fpfh = preprocess_point_cloud(target, voxel_size)
