@@ -3,7 +3,8 @@ import pandas as pd
 import open3d as o3
 import numpy as np
 import copy
-import math
+
+import chair_parameter as param
 
 # import euler
 # command qで解除
@@ -24,6 +25,21 @@ def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
     return preprocessed_data
 
 
+def source_preprocess(sourceData, trans_init, x_min, x_max, y_max, outlier):
+    source = o3.geometry.PointCloud()  # generate point_cloud
+    sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
+    sourceMatrix = np.dot(trans_init, sourceMatrix)
+    sourceMatrix = np.where(
+        (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
+    )
+    sourceMatrix = np.where((sourceMatrix[1] < y_max), sourceMatrix, outlier)
+    sourceMatrix = sourceMatrix.T
+    sourceMatrix = sourceMatrix[np.all(sourceMatrix != outlier, axis=1), :]
+    source.points = o3.utility.Vector3dVector(sourceMatrix)
+
+    return source
+
+
 def draw_registration_result(source, target, transformation):
     source_temp = copy.deepcopy(source)
     target_temp = copy.deepcopy(target)
@@ -33,7 +49,7 @@ def draw_registration_result(source, target, transformation):
     o3.visualization.draw_geometries(
         [source_temp, target_temp],
         zoom=0.6559,  # lager number, smaller object
-        front=[0.6452, 0.5036, 0.7011],
+        front=[-0.6452, 0.5036, 0.7011],
         lookat=[1.9892, 2.0208, 1.8945],
         up=[-0.2779, -0.5482, 0.1556],
     )
@@ -75,69 +91,30 @@ def prepare_dataset(voxel_size):
 
     dist_threshold = 10  # 閾値
 
-    # sourceData = sourceData.iloc[
-    #     np.nonzero((dist_sourceData < dist_threshold).values)[0], :
-    # ]
-    # sourceData = sourceData.iloc[np.nonzero((sourceData["Z"] > -0.35).values)[0], :]
-
-    # targetData = targetData.iloc[
-    #     np.nonzero((dist_targetData < dist_threshold).values)[0], :
-    # ]
-    # targetData = targetData.iloc[np.nonzero((targetData["Z"] > -0.15).values)[0], :]
-
     sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, -0.35)
     targetData = z_cut(targetData, dist_targetData, dist_threshold, -0.15)
 
     # source data
     print("Transforming source data")
-    source = o3.geometry.PointCloud()  # 0pointの生成
-
-    sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
-    trans_init_100 = np.asarray(
-        [
-            [2 / math.sqrt(5), -1 / math.sqrt(5), 0],
-            [1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
-            [0.0, 0.0, 1.0],
-        ]
+    source = source_preprocess(
+        sourceData,
+        param.trans_init_100,
+        param.x_min_100,
+        param.x_max_100,
+        param.y_max,
+        param.outlier,
     )
-    sourceMatrix = np.dot(trans_init_100, sourceMatrix)
-    print(len(sourceMatrix))
-    sourceMatrix = np.where(
-        (sourceMatrix[0] > -2) & (sourceMatrix[0] < 0), sourceMatrix, -100
-    )
-    sourceMatrix = np.where((sourceMatrix[1] < 3.5), sourceMatrix, -100)
-    sourceMatrix = sourceMatrix.T
-    sourceMatrix = sourceMatrix[np.all(sourceMatrix != -100, axis=1), :]
-
-    print(len(sourceMatrix))
-    source.points = o3.utility.Vector3dVector(sourceMatrix)
-    # print(source.points)
 
     # target data
     print("Transforming target data")
-    target = o3.geometry.PointCloud()
-    targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
-    trans_init_101 = np.asarray(
-        [
-            [2 / math.sqrt(5), 1 / math.sqrt(5), 0],
-            [-1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
-            [0.0, 0.0, 1.0],
-        ]
+    target = source_preprocess(
+        targetData,
+        param.trans_init_101,
+        param.x_min_101,
+        param.x_max_101,
+        param.y_max,
+        param.outlier,
     )
-    # rotate
-    targetMatrix = np.dot(trans_init_101, targetMatrix)
-
-    # 整理
-    targetMatrix = np.where(
-        (targetMatrix[0] > 0) & (targetMatrix[0] < 2), targetMatrix, -100
-    )
-    targetMatrix = np.where((targetMatrix[1] < 3.5), targetMatrix, -100)
-    targetMatrix = targetMatrix.T
-    targetMatrix = targetMatrix[np.all(targetMatrix != -100, axis=1), :]
-
-    target.points = o3.utility.Vector3dVector(targetMatrix)
-
-    draw_registration_result(source, target, np.identity(4))  # 回転前
 
     # draw_registration_result(source, target, np.identity(4))  # 回転後
 
