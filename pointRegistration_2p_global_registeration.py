@@ -3,12 +3,14 @@ import pandas as pd
 import open3d as o3
 import numpy as np
 import copy
+import statistics
 
 import chair_parameter as param
 
 # import euler
 # command qで画面消去→VScodeに焦点が当たってると全部消えるので注意
 # 椅子を左向きになるように合わせる(101(or100)に合わせてる？)
+# shift + option + 9で · が打てる
 
 
 def calc_distance(inputFrame):
@@ -28,22 +30,37 @@ def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
 
 
 # rotation and remove unnecessary data
-def source_preprocess(sourceData, trans_init, x_min, x_max, y, outlier):
+def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlier):
     source = o3.geometry.PointCloud()  # generate point_cloud
     sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
 
     # ここから回転 and cut
     sourceMatrix = np.dot(trans_init, sourceMatrix)
+
+    print(sourceMatrix)
+    # print("平均値")
+    # aveX = sum(sourceMatrix[0]) / len(sourceMatrix[0])
+    print("中央値")
+    print(statistics.median(sourceMatrix[1]))
+    medX = statistics.median(sourceMatrix[0])
+    medY = statistics.median(sourceMatrix[1])
+
+    if medX < 0:
+        sourceMatrix[0] = sourceMatrix[0] + 2
+    if medY < 0:
+        sourceMatrix[1] = sourceMatrix[1] + 3.5
+
     sourceMatrix = np.where(
         (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
     )
-    if y > 0:
-        sourceMatrix = np.where((sourceMatrix[1] < y), sourceMatrix, outlier)
-    else:
-        sourceMatrix = np.where((sourceMatrix[1] > y), sourceMatrix, outlier)
+    sourceMatrix = np.where(
+        (sourceMatrix[1] > y_min) & (sourceMatrix[1] < y_max), sourceMatrix, outlier
+    )
 
-    # 102の時は180度回転が必要
-
+    # if y_max > 0:
+    #     sourceMatrix = np.where((sourceMatrix[1] < y_max), sourceMatrix, outlier)
+    # else:
+    #     sourceMatrix = np.where((sourceMatrix[1] > y_min), sourceMatrix, outlier)
     # ここまで
 
     sourceMatrix = sourceMatrix.T
@@ -89,7 +106,7 @@ def preprocess_point_cloud(pcd, voxel_size):
 def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
-    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
+    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680102.csv")
     targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
 
     # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
@@ -104,7 +121,7 @@ def prepare_dataset(voxel_size):
     dist_targetData = calc_distance(targetData)
 
     dist_threshold = 10  # 閾値
-
+    print(dist_threshold)
     # cut by height and distance from origin
     sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, param.z_min_100)
     targetData = z_cut(targetData, dist_targetData, dist_threshold, param.z_min_101)
@@ -114,9 +131,10 @@ def prepare_dataset(voxel_size):
     # rotation and remove unnecessary data
     source = source_preprocess(
         sourceData,
-        param.trans_init_100,
-        param.x_min_100,
-        param.x_max_100,
+        param.trans_init_102,
+        param.x_min_101,
+        param.x_max_101,
+        param.y_min,
         param.y_max,
         param.outlier,
     )
@@ -129,6 +147,7 @@ def prepare_dataset(voxel_size):
         param.trans_init_101,
         param.x_min_101,
         param.x_max_101,
+        param.y_min,
         param.y_max,
         param.outlier,
     )
@@ -148,7 +167,7 @@ def prepare_dataset(voxel_size):
 def execute_global_registration(
     source_down, target_down, source_fpfh, target_fpfh, voxel_size
 ):
-    distance_threshold = voxel_size * 1.5
+    distance_threshold = voxel_size * 1.0
     print(":: RANSAC registration on downsampled point clouds.")
     print("   Since the downsampling voxel size is %.3f," % voxel_size)
     print("   we use a liberal distance threshold %.3f." % distance_threshold)
@@ -221,7 +240,7 @@ if __name__ == "__main__":
     result_ransac = execute_global_registration(
         source_down, target_down, source_fpfh, target_fpfh, voxel_size
     )
-    draw_registration_result(source_down, target_down, result_ransac.transformation)
+    # draw_registration_result(source_down, target_down, result_ransac.transformation)
 
     # print(result_ransac)
     # print(source)

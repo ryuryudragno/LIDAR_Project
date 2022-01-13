@@ -37,14 +37,15 @@ targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
 
 trans_init = np.asarray(
     [
-        [0.80, -0.60, 0],
-        [0.60, 0.80, 0.0],
+        [-0.80, 0.60, 0],
+        [-0.60, -0.80, 0.0],
         [0.0, 0.0, 1.0],
     ]
 )
 
 # rotate
 targetMatrix = np.dot(trans_init, targetMatrix)
+targetMatrix[1] = targetMatrix[1] + 3.3
 
 # 整理
 targetMatrix = np.where(
@@ -52,7 +53,11 @@ targetMatrix = np.where(
     targetMatrix,
     param.outlier,
 )
-targetMatrix = np.where((targetMatrix[1] < param.y_max), targetMatrix, param.outlier)
+targetMatrix = np.where(
+    (targetMatrix[1] > param.y_min) & (targetMatrix[1] < param.y_max),
+    targetMatrix,
+    param.outlier,
+)
 
 targetMatrix = targetMatrix.T
 targetMatrix = targetMatrix[np.all(targetMatrix != param.outlier, axis=1), :]
