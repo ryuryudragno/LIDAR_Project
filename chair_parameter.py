@@ -30,7 +30,7 @@ trans_init_101 = np.asarray(
     ]
 )
 
-# 37度回転
+# 37度回転→101と180回転差に
 trans_init_102 = np.asarray(
     [
         [0.80, -0.60, 0],

@@ -45,7 +45,7 @@ trans_init = np.asarray(
 )
 
 # rotate
-targetMatrix = np.dot(trans_init, targetMatrix)
+targetMatrix = np.dot(param.trans_init_100, targetMatrix)
 
 # 整理
 targetMatrix = np.where(
@@ -54,6 +54,7 @@ targetMatrix = np.where(
     param.outlier,
 )
 targetMatrix = np.where((targetMatrix[1] < param.y_max), targetMatrix, param.outlier)
+
 
 targetMatrix = targetMatrix.T
 targetMatrix = targetMatrix[np.all(targetMatrix != param.outlier, axis=1), :]

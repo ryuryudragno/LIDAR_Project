@@ -7,7 +7,8 @@ import copy
 import chair_parameter as param
 
 # import euler
-# command qで解除
+# command qで画面消去→VScodeに焦点が当たってると全部消えるので注意
+# 椅子を左向きになるように合わせる(101(or100)に合わせてる？)
 
 
 def calc_distance(inputFrame):
@@ -26,9 +27,12 @@ def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
     return preprocessed_data
 
 
+# rotation and remove unnecessary data
 def source_preprocess(sourceData, trans_init, x_min, x_max, y, outlier):
     source = o3.geometry.PointCloud()  # generate point_cloud
     sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
+
+    # ここから回転 and cut
     sourceMatrix = np.dot(trans_init, sourceMatrix)
     sourceMatrix = np.where(
         (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
@@ -37,6 +41,11 @@ def source_preprocess(sourceData, trans_init, x_min, x_max, y, outlier):
         sourceMatrix = np.where((sourceMatrix[1] < y), sourceMatrix, outlier)
     else:
         sourceMatrix = np.where((sourceMatrix[1] > y), sourceMatrix, outlier)
+
+    # 102の時は180度回転が必要
+
+    # ここまで
+
     sourceMatrix = sourceMatrix.T
     sourceMatrix = sourceMatrix[np.all(sourceMatrix != outlier, axis=1), :]
     source.points = o3.utility.Vector3dVector(sourceMatrix)
@@ -52,6 +61,10 @@ def draw_registration_result(source, target, transformation):
     source_temp.transform(transformation)
     o3.visualization.draw_geometries(
         [source_temp, target_temp],
+        zoom=0.6559,
+        front=[-0.5452, -0.836, -0.2011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.1556],
     )
 
 
@@ -76,7 +89,7 @@ def preprocess_point_cloud(pcd, voxel_size):
 def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
-    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680102.csv")
+    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
     targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
 
     # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
@@ -92,14 +105,16 @@ def prepare_dataset(voxel_size):
 
     dist_threshold = 10  # 閾値
 
+    # cut by height and distance from origin
     sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, param.z_min_100)
     targetData = z_cut(targetData, dist_targetData, dist_threshold, param.z_min_101)
 
     # source data
     print("Transforming source data")
+    # rotation and remove unnecessary data
     source = source_preprocess(
         sourceData,
-        param.trans_init_102,
+        param.trans_init_100,
         param.x_min_100,
         param.x_max_100,
         param.y_max,
@@ -108,6 +123,7 @@ def prepare_dataset(voxel_size):
 
     # target data
     print("Transforming target data")
+    # rotation and remove unnecessary data
     target = source_preprocess(
         targetData,
         param.trans_init_101,
@@ -116,11 +132,16 @@ def prepare_dataset(voxel_size):
         param.y_max,
         param.outlier,
     )
+    # 事前処理後
+    draw_registration_result(source, target, np.identity(4))
 
-    draw_registration_result(source, target, np.identity(4))  # 回転後
-
+    # 点群をダウンサンプリングし特徴を抽出
+    # downsample the point cloud, estimate normals, then compute a FPFH feature for each point)
     source_down, source_fpfh = preprocess_point_cloud(source, voxel_size)
     target_down, target_fpfh = preprocess_point_cloud(target, voxel_size)
+    # print("sourceは" + str(source))
+    # print("source_downは" + str(source_down))
+    # print("source_fpfhは" + str(source_fpfh))
     return source, target, source_down, target_down, source_fpfh, target_fpfh
 
 
@@ -172,7 +193,7 @@ def execute_fast_global_registration(
 
 
 def refine_registration(source, target, source_fpfh, target_fpfh, voxel_size):
-    distance_threshold = voxel_size * 0.4
+    distance_threshold = voxel_size * 1.5
     print(":: Point-to-plane ICP registration is applied on original point")
     print("   clouds to refine the alignment. This time we use a strict")
     print("   distance threshold %.3f." % distance_threshold)
