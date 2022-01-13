@@ -1,4 +1,4 @@
-from datetime import time
+import time
 import pandas as pd
 import open3d as o3
 import numpy as np
@@ -6,6 +6,7 @@ import copy
 import statistics
 
 import chair_parameter as param
+import probreg
 
 # import euler
 # command qで画面消去→VScodeに焦点が当たってると全部消えるので注意
@@ -37,16 +38,11 @@ def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlie
     # ここから回転 and cut
     sourceMatrix = np.dot(trans_init, sourceMatrix)
 
-    print(sourceMatrix)
-    # print("平均値")
-    # aveX = sum(sourceMatrix[0]) / len(sourceMatrix[0])
-    print("中央値")
-    print(statistics.median(sourceMatrix[1]))
     medX = statistics.median(sourceMatrix[0])
     medY = statistics.median(sourceMatrix[1])
 
     if medX < 0:
-        sourceMatrix[0] = sourceMatrix[0] + 2
+        sourceMatrix[0] = sourceMatrix[0] + 2.03
     if medY < 0:
         sourceMatrix[1] = sourceMatrix[1] + 3.5
 
@@ -56,15 +52,25 @@ def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlie
     sourceMatrix = np.where(
         (sourceMatrix[1] > y_min) & (sourceMatrix[1] < y_max), sourceMatrix, outlier
     )
+    # axisで行か列かを指定できる
+    sourceMatrix = sourceMatrix[:, np.all(sourceMatrix != outlier, axis=0)]
+    medX = statistics.median(sourceMatrix[0])
+    medY = statistics.median(sourceMatrix[1])
+    medZ = statistics.median(sourceMatrix[2])
+    print(medX)
+    print(medY)
+    print(medZ)
+    # if medY > 1.8:
+    #     sourceMatrix[2] = sourceMatrix[2] + 0
+    # if medZ > 0.2:
+    #     sourceMatrix[2] = sourceMatrix[2] - 0.2
 
-    # if y_max > 0:
-    #     sourceMatrix = np.where((sourceMatrix[1] < y_max), sourceMatrix, outlier)
-    # else:
-    #     sourceMatrix = np.where((sourceMatrix[1] > y_min), sourceMatrix, outlier)
-    # ここまで
+    sourceMatrix[0] = sourceMatrix[0] - medX
+    sourceMatrix[1] = sourceMatrix[1] - medY
+    sourceMatrix[2] = sourceMatrix[2] - medZ
 
     sourceMatrix = sourceMatrix.T
-    sourceMatrix = sourceMatrix[np.all(sourceMatrix != outlier, axis=1), :]
+
     source.points = o3.utility.Vector3dVector(sourceMatrix)
 
     return source
@@ -106,7 +112,7 @@ def preprocess_point_cloud(pcd, voxel_size):
 def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
-    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680102.csv")
+    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
     targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
 
     # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
@@ -121,7 +127,7 @@ def prepare_dataset(voxel_size):
     dist_targetData = calc_distance(targetData)
 
     dist_threshold = 10  # 閾値
-    print(dist_threshold)
+
     # cut by height and distance from origin
     sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, param.z_min_100)
     targetData = z_cut(targetData, dist_targetData, dist_threshold, param.z_min_101)
@@ -131,9 +137,9 @@ def prepare_dataset(voxel_size):
     # rotation and remove unnecessary data
     source = source_preprocess(
         sourceData,
-        param.trans_init_102,
-        param.x_min_101,
-        param.x_max_101,
+        param.trans_init_100,
+        param.x_min,
+        param.x_max,
         param.y_min,
         param.y_max,
         param.outlier,
@@ -145,12 +151,13 @@ def prepare_dataset(voxel_size):
     target = source_preprocess(
         targetData,
         param.trans_init_101,
-        param.x_min_101,
-        param.x_max_101,
+        param.x_min,
+        param.x_max,
         param.y_min,
         param.y_max,
         param.outlier,
     )
+    print(target)
     # 事前処理後
     draw_registration_result(source, target, np.identity(4))
 
@@ -167,7 +174,7 @@ def prepare_dataset(voxel_size):
 def execute_global_registration(
     source_down, target_down, source_fpfh, target_fpfh, voxel_size
 ):
-    distance_threshold = voxel_size * 1.0
+    distance_threshold = voxel_size * 1.5
     print(":: RANSAC registration on downsampled point clouds.")
     print("   Since the downsampling voxel size is %.3f," % voxel_size)
     print("   we use a liberal distance threshold %.3f." % distance_threshold)
@@ -187,6 +194,21 @@ def execute_global_registration(
             ),
         ],
         o3.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999),
+    )
+    return result
+
+
+def refine_registration(source, target, source_fpfh, target_fpfh, voxel_size):
+    distance_threshold = voxel_size * 0.4
+    print(":: Point-to-plane ICP registration is applied on original point")
+    print("   clouds to refine the alignment. This time we use a strict")
+    print("   distance threshold %.3f." % distance_threshold)
+    result = o3.pipelines.registration.registration_icp(
+        source,
+        target,
+        distance_threshold,
+        result_ransac.transformation,
+        o3.pipelines.registration.TransformationEstimationPointToPlane(),
     )
     return result
 
@@ -211,19 +233,34 @@ def execute_fast_global_registration(
     return result
 
 
-def refine_registration(source, target, source_fpfh, target_fpfh, voxel_size):
-    distance_threshold = voxel_size * 1.5
-    print(":: Point-to-plane ICP registration is applied on original point")
-    print("   clouds to refine the alignment. This time we use a strict")
-    print("   distance threshold %.3f." % distance_threshold)
-    result = o3.pipelines.registration.registration_icp(
+def icp(source, target, threshold, trans_init):
+    print("Apply point-to-point ICP")
+    reg_p2p = o3.pipelines.registration.registration_icp(
         source,
         target,
-        distance_threshold,
-        result_ransac.transformation,
-        o3.pipelines.registration.TransformationEstimationPointToPlane(),
+        threshold,
+        trans_init,
+        o3.pipelines.registration.TransformationEstimationPointToPoint(),
     )
-    return result
+    print(reg_p2p)
+    print("Transformation is:")
+    print(reg_p2p.transformation)
+    draw_registration_result(source, target, reg_p2p.transformation)
+
+
+def icp_more(source, target, threshold, trans_init):
+    reg_p2p = o3.pipelines.registration.registration_icp(
+        source,
+        target,
+        threshold,
+        trans_init,
+        o3.pipelines.registration.TransformationEstimationPointToPoint(),
+        o3.pipelines.registration.ICPConvergenceCriteria(max_iteration=3000),
+    )
+    print(reg_p2p)
+    print("Transformation is:")
+    print(reg_p2p.transformation)
+    draw_registration_result(source, target, reg_p2p.transformation)
 
 
 if __name__ == "__main__":
@@ -240,9 +277,9 @@ if __name__ == "__main__":
     result_ransac = execute_global_registration(
         source_down, target_down, source_fpfh, target_fpfh, voxel_size
     )
-    # draw_registration_result(source_down, target_down, result_ransac.transformation)
+    print(result_ransac)
+    draw_registration_result(source_down, target_down, result_ransac.transformation)
 
-    # print(result_ransac)
     # print(source)
     # print(target)
     # print(source_down)
@@ -250,10 +287,51 @@ if __name__ == "__main__":
     # print(source_fpfh)
     # print(target_fpfh)
 
-    # this does not work yet - error
-    #
+    # # this does not work yet - error(refine)
     # result_icp = refine_registration(
     #     source, target, source_fpfh, target_fpfh, voxel_size
     # )
     # print(result_icp)
     # draw_registration_result(source, target, result_icp.transformation)
+
+    # 高速グローバル
+    # start = time.time()
+    # result_fast = execute_fast_global_registration(
+    #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
+    # )
+    # print("Fast global registration took %.3f sec.\n" % (time.time() - start))
+    # print(result_fast)
+    # draw_registration_result(source_down, target_down, result_fast.transformation)
+
+    threshold = 0.02
+    trans_init = np.eye(4)
+
+    # Point to point ICP
+    # icp(source, target, threshold, trans_init)
+
+    # ICP回数多め
+    # icp_more(source, target, threshold, trans_init)
+
+    tf_param, _, _ = probreg.cpd.registration_cpd(source, target)
+    result = copy.deepcopy(source)
+    result.points = tf_param.transform(result.points)
+
+    # draw result
+    source.paint_uniform_color([1, 0, 0])
+    target.paint_uniform_color([0, 1, 0])
+    result.paint_uniform_color([0, 0, 1])
+    o3.visualization.draw_geometries([target, result])
+
+# # Point to Plane ICP
+# print("Apply point-to-plane ICP")
+# reg_p2l = o3.pipelines.registration.registration_icp(
+#     source,
+#     target,
+#     threshold,
+#     trans_init,
+#     o3.pipelines.registration.TransformationEstimationForColoredICP(),
+# )
+# print(reg_p2l)
+# print("Transformation is:")
+# print(reg_p2l.transformation)
+# draw_registration_result(source, target, reg_p2l.transformation)

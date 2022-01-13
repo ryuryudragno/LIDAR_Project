@@ -1,3 +1,4 @@
+import statistics
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -45,7 +46,7 @@ trans_init = np.asarray(
 
 # rotate
 targetMatrix = np.dot(trans_init, targetMatrix)
-targetMatrix[1] = targetMatrix[1] + 3.3
+targetMatrix[1] = targetMatrix[1] + 3.5
 
 # 整理
 targetMatrix = np.where(
@@ -59,10 +60,18 @@ targetMatrix = np.where(
     param.outlier,
 )
 
+targetMatrix = targetMatrix[:, np.all(targetMatrix != param.outlier, axis=0)]
+medX = statistics.median(targetMatrix[0])
+print(medX)
+medY = statistics.median(targetMatrix[1])
+print(medY)
+medZ = statistics.median(targetMatrix[2])
+print(medZ)
+targetMatrix[0] = targetMatrix[0] - medX
+targetMatrix[1] = targetMatrix[1] - medY
+targetMatrix[2] = targetMatrix[2] - medZ
+
 targetMatrix = targetMatrix.T
-targetMatrix = targetMatrix[np.all(targetMatrix != param.outlier, axis=1), :]
-print(targetMatrix)
-print(len(targetMatrix))
 
 # 3D散布図でプロットするデータを生成する為にnumpyを使用
 X = targetMatrix[:, 0]  # 自然数の配列

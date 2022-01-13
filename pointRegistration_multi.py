@@ -1,8 +1,11 @@
+import statistics
 from numpy.lib.utils import source
 import pandas as pd
 import open3d as o3
 import numpy as np
 import copy
+
+import chair_parameter as param
 
 # 複数点
 # http://www.open3d.org/docs/0.13.0/tutorial/pipelines/multiway_registration.html
@@ -12,6 +15,56 @@ import copy
 
 def calc_distance(inputFrame):
     return (inputFrame["X"] ** 2 + inputFrame["Y"] ** 2 + inputFrame["Z"] ** 2) ** 0.5
+
+
+def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
+    distance_cut = sourceData.iloc[
+        np.nonzero((dist_data < dist_threshold).values)[0], :
+    ]
+    distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
+    preprocessed_data = distance_cut.iloc[
+        np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
+    ]
+
+    return preprocessed_data
+
+
+# rotation and remove unnecessary data
+def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlier):
+    source = o3.geometry.PointCloud()  # generate point_cloud
+    sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
+
+    # ここから回転 and cut
+    sourceMatrix = np.dot(trans_init, sourceMatrix)
+
+    medX = statistics.median(sourceMatrix[0])
+    medY = statistics.median(sourceMatrix[1])
+
+    if medX < 0:
+        sourceMatrix[0] = sourceMatrix[0] + 2
+    if medY < 0:
+        sourceMatrix[1] = sourceMatrix[1] + 3.5
+
+    sourceMatrix = np.where(
+        (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
+    )
+    sourceMatrix = np.where(
+        (sourceMatrix[1] > y_min) & (sourceMatrix[1] < y_max), sourceMatrix, outlier
+    )
+    # axisで行か列かを指定できる
+    sourceMatrix = sourceMatrix[:, np.all(sourceMatrix != outlier, axis=0)]
+    medX = statistics.median(sourceMatrix[0])
+    medY = statistics.median(sourceMatrix[1])
+    medZ = statistics.median(sourceMatrix[2])
+    sourceMatrix[0] = sourceMatrix[0] - medX
+    sourceMatrix[1] = sourceMatrix[1] - medY
+    sourceMatrix[2] = sourceMatrix[2] - medZ
+
+    sourceMatrix = sourceMatrix.T
+
+    source.points = o3.utility.Vector3dVector(sourceMatrix)
+
+    return source
 
 
 def preprocess_point_cloud(pcd, voxel_size):
@@ -34,29 +87,32 @@ def prepare_dataset(voxel_size):
     dist_threshold = 10  # 距離の閾値(原点から遠すぎるものを排除？)
     for i in range(4):
         # read the data
-        sourceData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(i))
+        # sourceData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(i))
         # sourceData = pd.read_csv(
         #     "datasets_lidar/boxPosition1/boxPosition1_192168010%s.csv" % str(i)
         # )
-        # sourceData = pd.read_csv("datasets_lidar/crane/crane_192168010%s.csv" % str(i))
+        sourceData = pd.read_csv(
+            "datasets_lidar/boxPosition2/boxPosition2_192168010%s.csv" % str(i)
+        )
 
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
 
         # print(sourceData(dist_sourceData>20))
-        print(np.nonzero((dist_sourceData < dist_threshold).values)[0])
-        sourceData = sourceData.iloc[
-            np.nonzero((dist_sourceData < dist_threshold).values)[0], :
-        ]
+        sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, param.z_min_101)
         # print(sourceData)
 
         # source data
         print("Transforming source data")
-        source = o3.geometry.PointCloud()
-        sourceMatrix = np.array(
-            [sourceData["X"], sourceData["Y"], sourceData["Z"]]
-        ).transpose()
-        source.points = o3.utility.Vector3dVector(sourceMatrix)
+        source = source_preprocess(
+            sourceData,
+            param.transarray[i],
+            param.x_min,
+            param.x_max,
+            param.y_min,
+            param.y_max,
+            param.outlier,
+        )
 
         print(":: Downsample with a voxel size %.3f." % voxel_size)
         pcd_down = source.voxel_down_sample(voxel_size)
@@ -128,21 +184,6 @@ def full_registration(
     # res_ran = []
     for source_id in range(n_pcds):
         for target_id in range(source_id + 1, n_pcds):
-            ##自作
-            # source_down, source_fpfh = preprocess_point_cloud(
-            #     pcds[source_id], voxel_size
-            # )
-            # target_down, target_fpfh = preprocess_point_cloud(
-            #     pcds[target_id], voxel_size
-            # )
-            # result_ransac = execute_global_registration(
-            #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
-            # )
-            # so.append(source_down)
-            # ta.append(target_down)
-            # res_ran.append(result_ransac)
-            ##ここまで
-
             transformation_icp, information_icp = pairwise_registration(
                 pcds[source_id], pcds[target_id]
             )
@@ -211,10 +252,10 @@ if __name__ == "__main__":
     # print(pcds_down)
     o3.visualization.draw_geometries(
         pcds_down,
-        zoom=0.5412,
-        front=[0.4257, -0.2125, -0.8795],
-        lookat=[-1.6172, 4.0475, -1.532],
-        up=[-0.0694, -0.9768, 0.2024],
+        zoom=0.6559,
+        front=[-0.5452, -0.836, -0.2011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.1556],
     )
 
     # # 5
@@ -251,10 +292,10 @@ if __name__ == "__main__":
         pcds_down[point_id].transform(pose_graph.nodes[point_id].pose)
     o3.visualization.draw_geometries(
         pcds_down,
-        zoom=0.5412,
-        front=[0.4257, -0.2125, -0.8795],
-        lookat=[-1.6172, 4.0475, 1.532],
-        up=[-0.0694, -0.9768, 0.2024],
+        zoom=0.6559,
+        front=[-0.5452, -0.836, -0.2011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.1556],
     )
 
     # result_ransac = execute_global_registration(

@@ -1,4 +1,8 @@
 import math
+import datetime
+import statistics
+import time
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -46,19 +50,33 @@ targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
 
 # # rotate
 targetMatrix = np.dot(param.trans_init_103, targetMatrix)
+targetMatrix[0] = targetMatrix[0] + 2
+targetMatrix[1] = targetMatrix[1] + 3.5
 
 # 整理
 targetMatrix = np.where(
-    (targetMatrix[0] > param.x_min_103) & (targetMatrix[0] < param.x_max_103),
+    (targetMatrix[0] > param.x_min) & (targetMatrix[0] < param.x_max),
     targetMatrix,
     param.outlier,
 )
-targetMatrix = np.where((targetMatrix[1] > param.y_min), targetMatrix, param.outlier)
+targetMatrix = np.where(
+    (targetMatrix[1] > param.y_min) & (targetMatrix[1] < param.y_max),
+    targetMatrix,
+    param.outlier,
+)
+
+targetMatrix = targetMatrix[:, np.all(targetMatrix != param.outlier, axis=0)]
+medX = statistics.median(targetMatrix[0])
+print(medX)
+medY = statistics.median(targetMatrix[1])
+print(medY)
+medZ = statistics.median(targetMatrix[2])
+print(medZ)
+targetMatrix[0] = targetMatrix[0] - medX
+targetMatrix[1] = targetMatrix[1] - medY
+targetMatrix[2] = targetMatrix[2] - medZ
 
 targetMatrix = targetMatrix.T
-targetMatrix = targetMatrix[np.all(targetMatrix != param.outlier, axis=1), :]
-print(targetMatrix)
-print(len(targetMatrix))
 
 # 3D散布図でプロットするデータを生成する為にnumpyを使用
 X = targetMatrix[:, 0]  # 自然数の配列
@@ -80,3 +98,4 @@ ax.plot(X, Y, Z, marker="o", linestyle="None")
 
 # 最後に.show()を書いてグラフ表示
 plt.show()
+# print(time.time())
