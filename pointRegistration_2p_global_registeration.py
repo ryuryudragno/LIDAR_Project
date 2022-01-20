@@ -320,7 +320,7 @@ if __name__ == "__main__":
     source.paint_uniform_color([1, 0, 0])
     target.paint_uniform_color([0, 1, 0])
     result.paint_uniform_color([0, 0, 1])
-    o3.visualization.draw_geometries([target, result])
+    o3.visualization.draw_geometries([source, target, result])
 
 # # Point to Plane ICP
 # print("Apply point-to-plane ICP")
