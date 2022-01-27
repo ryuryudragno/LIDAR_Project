@@ -34,6 +34,7 @@ def source_preprocess(
     sourceData,
     trans_init_z,
     trans_init_x,
+    trans_init_y,
     x_min,
     x_max,
     y_min,
@@ -48,14 +49,18 @@ def source_preprocess(
     # ここから回転 and cut
     sourceMatrix = np.dot(trans_init_z, sourceMatrix)
     sourceMatrix = np.dot(trans_init_x, sourceMatrix)
+    sourceMatrix = np.dot(trans_init_y, sourceMatrix)
 
     medX = statistics.median(sourceMatrix[0])
     medY = statistics.median(sourceMatrix[1])
+    medZ = statistics.median(sourceMatrix[2])
 
     if medX < 0:
         sourceMatrix[0] = sourceMatrix[0] + 2
     if medY < 0:
         sourceMatrix[1] = sourceMatrix[1] + 3.5
+    if medZ < 0.1:
+        sourceMatrix[2] = sourceMatrix[2] + 0.2
 
     sourceMatrix = np.where(
         (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
@@ -120,12 +125,13 @@ def prepare_dataset(voxel_size):
             sourceData,
             param.transarray_z[i],
             param.transarray_x[i],
+            param.transarray_y[i],
             param.x_min,
             param.x_max,
             param.y_min,
             param.y_max,
             param.z_max,
-            param.zmin[i],
+            param.z_min[i],
             param.outlier,
         )
 

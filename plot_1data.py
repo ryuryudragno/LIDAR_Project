@@ -34,6 +34,7 @@ sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
 # rotate
 sourceMatrix = np.dot(param.transarray_z[m], sourceMatrix)
 sourceMatrix = np.dot(param.transarray_x[m], sourceMatrix)
+sourceMatrix = np.dot(param.transarray_y[m], sourceMatrix)
 
 medX = statistics.median(sourceMatrix[0])
 medY = statistics.median(sourceMatrix[1])
@@ -48,7 +49,7 @@ if medX < 0:
     sourceMatrix[0] = sourceMatrix[0] + 2
 if medY < 0:
     sourceMatrix[1] = sourceMatrix[1] + 3.5
-if medZ < 0:
+if medZ < 0.1:
     sourceMatrix[2] = sourceMatrix[2] + 0.2
 
 

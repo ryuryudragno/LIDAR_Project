@@ -35,6 +35,7 @@ def source_preprocess(
     sourceData,
     trans_init_z,
     trans_init_x,
+    trans_init_y,
     x_min,
     x_max,
     y_min,
@@ -46,22 +47,28 @@ def source_preprocess(
     source = o3.geometry.PointCloud()  # generate point_cloud
     sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
 
-    # ここから回転 and cut
+    # rotate
     sourceMatrix = np.dot(trans_init_z, sourceMatrix)
     sourceMatrix = np.dot(trans_init_x, sourceMatrix)
+    sourceMatrix = np.dot(trans_init_y, sourceMatrix)
 
     medX = statistics.median(sourceMatrix[0])
     medY = statistics.median(sourceMatrix[1])
+    medZ = statistics.median(sourceMatrix[2])
     print("中央値は\n")
     print(medX)
     print(medY)
+    print(medZ)
     print("\n")
-
+    # Transfer
     if medX < 0:
         sourceMatrix[0] = sourceMatrix[0] + 2
     if medY < 0:
         sourceMatrix[1] = sourceMatrix[1] + 3.5
+    if medZ < 0.1:
+        sourceMatrix[2] = sourceMatrix[2] + 0.2
 
+    # Cut
     sourceMatrix = np.where(
         (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
     )
@@ -127,7 +134,7 @@ def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
     m = 0
-    n = 2
+    n = 3
     # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
     # 6→rubbishBin_bricks,7→two_Bricks
     sourceData = pd.read_csv(param.readData_multi[3] % str(m))
@@ -150,12 +157,13 @@ def prepare_dataset(voxel_size):
         sourceData,
         param.transarray_z[m],
         param.transarray_x[m],
+        param.transarray_y[m],
         param.x_min,
         param.x_max,
         param.y_min,
         param.y_max,
         param.z_max,
-        param.zmin[m],
+        param.z_min[m],
         param.outlier,
     )
 
@@ -166,12 +174,13 @@ def prepare_dataset(voxel_size):
         targetData,
         param.transarray_z[n],
         param.transarray_x[n],
+        param.transarray_y[n],
         param.x_min,
         param.x_max,
         param.y_min,
         param.y_max,
         param.z_max,
-        param.zmin[n],
+        param.z_min[n],
         param.outlier,
     )
     print(target)
@@ -296,7 +305,7 @@ if __name__ == "__main__":
     )
     print("Global_registration後")
     print(result_ransac)
-    # draw_registration_result(source, target, result_ransac.transformation)
+    draw_registration_result(source, target, result_ransac.transformation)
 
     # print(source)
     # print(target)
@@ -326,8 +335,8 @@ if __name__ == "__main__":
     trans_init = np.eye(4)
 
     # # Point to point ICP
-    icp(source, target, threshold, result_ransac.transformation)
-    icp(source, target, threshold, refine_icp.transformation)
+    # icp(source, target, threshold, result_ransac.transformation)
+    # icp(source, target, threshold, refine_icp.transformation)
 
     # ICP回数多め
     # icp_more(source, target, threshold, trans_init)
