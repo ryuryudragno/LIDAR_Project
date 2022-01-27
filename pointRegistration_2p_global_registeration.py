@@ -127,18 +127,11 @@ def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
     m = 0
-    n = 1
-    sourceData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(m))
-    targetData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(n))
-    # sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
-    # targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
-
-    # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
-    # targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
-    # sourceData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680100.csv")
-    # targetData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680101.csv")
-    # sourceData = pd.read_csv("datasets_lidar/crane/crane_1921680100.csv")
-    # targetData = pd.read_csv("datasets_lidar/crane/crane_1921680101.csv")
+    n = 2
+    # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
+    # 6→rubbishBin_bricks,7→two_Bricks
+    sourceData = pd.read_csv(param.readData_multi[3] % str(m))
+    targetData = pd.read_csv(param.readData_multi[3] % str(n))
 
     ## remove outliers which are further away then 10 meters
     dist_sourceData = calc_distance(sourceData)
@@ -301,8 +294,9 @@ if __name__ == "__main__":
     result_ransac = execute_global_registration(
         source_down, target_down, source_fpfh, target_fpfh, voxel_size
     )
+    print("Global_registration後")
     print(result_ransac)
-    draw_registration_result(source, target, result_ransac.transformation)
+    # draw_registration_result(source, target, result_ransac.transformation)
 
     # print(source)
     # print(target)
@@ -315,10 +309,11 @@ if __name__ == "__main__":
     refine_icp = refine_registration(
         source_down, target_down, source_fpfh, target_fpfh, voxel_size
     )
+    print("refine後")
     print(refine_icp)
-    draw_registration_result(source, target, refine_icp.transformation)
+    # draw_registration_result(source, target, refine_icp.transformation)
 
-    # 高速グローバル
+    # # rapid_global
     # start = time.time()
     # result_fast = execute_fast_global_registration(
     #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
@@ -330,8 +325,9 @@ if __name__ == "__main__":
     threshold = 0.02
     trans_init = np.eye(4)
 
-    # Point to point ICP
-    # icp(source, target, threshold, trans_init)
+    # # Point to point ICP
+    icp(source, target, threshold, result_ransac.transformation)
+    icp(source, target, threshold, refine_icp.transformation)
 
     # ICP回数多め
     # icp_more(source, target, threshold, trans_init)
@@ -347,17 +343,16 @@ if __name__ == "__main__":
     # result.paint_uniform_color([0, 0, 1])
     # o3.visualization.draw_geometries([source, target, result])
 
-
-# # Point to Plane ICP
-# print("Apply point-to-plane ICP")
-# reg_p2l = o3.pipelines.registration.registration_icp(
-#     source,
-#     target,
-#     threshold,
-#     trans_init,
-#     o3.pipelines.registration.TransformationEstimationForColoredICP(),
-# )
-# print(reg_p2l)
-# print("Transformation is:")
-# print(reg_p2l.transformation)
-# draw_registration_result(source, target, reg_p2l.transformation)
+    # # Point to Plane ICP
+    # print("Apply point-to-plane ICP")
+    # reg_p2l = o3.pipelines.registration.registration_icp(
+    #     source_down,
+    #     target_down,
+    #     threshold,
+    #     trans_init,
+    #     o3.pipelines.registration.TransformationEstimationForColoredICP(),
+    # )
+    # print(reg_p2l)
+    # print("Transformation is:")
+    # print(reg_p2l.transformation)
+    # draw_registration_result(source, target, reg_p2l.transformation)

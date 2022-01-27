@@ -6,7 +6,6 @@ x_min = 0  # 0
 x_max = 1.9  # 1.9
 y_min = 0.1  # 0.1
 y_max = 3  # 3
-z_min = -1
 z_max = 1
 
 # 壁あり
@@ -30,6 +29,7 @@ z_min_100 = -1  # -0.25
 z_min_101 = -1  # -0.15
 z_min_102 = -1  # -0.35
 z_min_103 = -1  # -0.35
+z_min = [z_min_100, z_min_101, z_min_102, z_min_103]
 
 outlier = -100
 unit_matrix = np.eye(3)
@@ -104,7 +104,6 @@ trans_init_103x = np.asarray(
     ]
 )
 
-zmin = [z_min_100, z_min_101, z_min_102, z_min_103]
 transarray_z = [trans_init_100z, trans_init_101z, trans_init_102z, trans_init_103z]
 transarray_x = [trans_init_100x, trans_init_101x, trans_init_102x, trans_init_103x]
 # print(transarray)
@@ -146,18 +145,6 @@ trans_carib4 = np.asarray(
 )
 trans_carib = [trans_carib1, trans_carib2, trans_carib3, trans_carib4]
 
-# [[9.99163125e-01  3.93122295e-02  1.12959418e-02 -7.71988079e-02]
-#  [-3.94155018e-02  9.99181742e-01  9.06998369e-03  1.55506416e-01]
-#  [-1.09301375e-02 -9.50762846e-03  9.99895063e-01 -3.97856370e-04]
-#  [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  1.00000000e+00]]
-# [[ 0.99639894 -0.0410268  -0.07420213  0.04774881]
-#  [ 0.04052159  0.99914417 -0.00830186  0.01895619]
-#  [ 0.07447922  0.00526518  0.99720867 -0.02751265]
-#  [ 0.          0.          0.          1.        ]]
-# [[ 0.99077428 -0.11546527  0.07095144  0.35902327]
-#  [ 0.11392439  0.9931645   0.02540688 -0.11939477]
-#  [-0.07340006 -0.01708939  0.99715615  0.22807331]
-#  [ 0.          0.          0.          1.        ]]
 
 readData_multi = [
     "datasets_lidar/boxBinBrickets/boxBinBrickets_192168010%s.csv",
