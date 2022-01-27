@@ -95,7 +95,7 @@ def preprocess_point_cloud(pcd, voxel_size):
     print(":: Downsample with a voxel size %.3f." % voxel_size)
     pcd_down = pcd.voxel_down_sample(voxel_size)
 
-    radius_normal = voxel_size * 2
+    radius_normal = voxel_size * 4
     print(":: Estimate normal with search radius %.3f." % radius_normal)
     pcd_down.estimate_normals(
         o3.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30)
@@ -112,11 +112,11 @@ def preprocess_point_cloud(pcd, voxel_size):
 def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
-    sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
-    targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
+    # sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
+    # targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
 
-    # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
-    # targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
+    sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
+    targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
     # sourceData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680100.csv")
     # targetData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680101.csv")
     # sourceData = pd.read_csv("datasets_lidar/crane/crane_1921680100.csv")
@@ -289,7 +289,7 @@ if __name__ == "__main__":
 
     # # this does not work yet - error(refine)
     # result_icp = refine_registration(
-    #     source, target, source_fpfh, target_fpfh, voxel_size
+    #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
     # )
     # print(result_icp)
     # draw_registration_result(source, target, result_icp.transformation)
@@ -307,20 +307,22 @@ if __name__ == "__main__":
     trans_init = np.eye(4)
 
     # Point to point ICP
-    # icp(source, target, threshold, trans_init)
+    icp(source, target, threshold, trans_init)
 
     # ICP回数多め
-    # icp_more(source, target, threshold, trans_init)
+    icp_more(source, target, threshold, trans_init)
 
-    tf_param, _, _ = probreg.cpd.registration_cpd(source, target)
-    result = copy.deepcopy(source)
-    result.points = tf_param.transform(result.points)
+    # probreg
+    # tf_param, _, _ = probreg.cpd.registration_cpd(source, target)
+    # result = copy.deepcopy(source)
+    # result.points = tf_param.transform(result.points)
 
-    # draw result
-    source.paint_uniform_color([1, 0, 0])
-    target.paint_uniform_color([0, 1, 0])
-    result.paint_uniform_color([0, 0, 1])
-    o3.visualization.draw_geometries([source, target, result])
+    # # draw result
+    # source.paint_uniform_color([1, 0, 0])
+    # target.paint_uniform_color([0, 1, 0])
+    # result.paint_uniform_color([0, 0, 1])
+    # o3.visualization.draw_geometries([source, target, result])
+
 
 # # Point to Plane ICP
 # print("Apply point-to-plane ICP")

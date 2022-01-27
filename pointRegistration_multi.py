@@ -87,13 +87,13 @@ def prepare_dataset(voxel_size):
     dist_threshold = 10  # 距離の閾値(原点から遠すぎるものを排除？)
     for i in range(4):
         # read the data
-        # sourceData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(i))
+        sourceData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(i))
         # sourceData = pd.read_csv(
         #     "datasets_lidar/boxPosition1/boxPosition1_192168010%s.csv" % str(i)
         # )
-        sourceData = pd.read_csv(
-            "datasets_lidar/boxPosition2/boxPosition2_192168010%s.csv" % str(i)
-        )
+        # sourceData = pd.read_csv(
+        #     "datasets_lidar/boxPosition2/boxPosition2_192168010%s.csv" % str(i)
+        # )
 
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
     # 入力の点群を準備したやつ表示
     # print("\npcd_downsは\n")
-    # print(pcds_down)
+    print(pcds_down)
     o3.visualization.draw_geometries(
         pcds_down,
         zoom=0.6559,
