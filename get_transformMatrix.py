@@ -105,7 +105,7 @@ def prepare_dataset(voxel_size):
         # read the data
         # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
         # 6→rubbishBin_bricks,7→two_Bricks
-        sourceData = pd.read_csv(param.readData_multi[0] % str(i))
+        sourceData = pd.read_csv(param.readData_multi[3] % str(i))
 
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
@@ -303,41 +303,13 @@ if __name__ == "__main__":
 
     # # 7
     print("Transform points and display")
-    pcd_combined = o3.geometry.PointCloud()
     for point_id in range(len(pcds_down)):
         print(pose_graph.nodes[point_id].pose)
-        pcds_down[point_id].transform(param.trans_carib[point_id])
-        pcd_combined += pcds_down[point_id]
-    # o3.visualization.draw_geometries(
-    #     pcds_down,
-    #     zoom=0.6559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
-    # )
-    pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
-    o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
+        pcds_down[point_id].transform(pose_graph.nodes[point_id].pose)
     o3.visualization.draw_geometries(
-        [pcd_combined_down],
+        pcds_down,
         zoom=0.6559,
         front=[-0.5452, -0.836, -0.2011],
         lookat=[0, 0, 0],
         up=[-0.2779, -0.282, 0.1556],
     )
-
-    # # 8
-    # sources, pcds = prepare_dataset(voxel_size)
-    # pcd_combined = o3.geometry.PointCloud()
-    # for point_id in range(len(pcds)):
-    #     pcds[point_id].transform(param.trans_carib[point_id])
-    #     pcd_combined += pcds[point_id]
-
-    # pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
-    # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
-    # o3.visualization.draw_geometries(
-    #     [pcd_combined_down],
-    #     zoom=0.6559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
-    # )
