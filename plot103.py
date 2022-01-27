@@ -29,11 +29,7 @@ dist_threshold = 10  # 閾値
 targetData = targetData.iloc[
     np.nonzero((dist_targetData < dist_threshold).values)[0], :
 ]
-targetData = targetData.iloc[np.nonzero((targetData["Z"] > -0.35).values)[0], :]
-targetData = targetData.iloc[np.nonzero((targetData["Z"] < 0.8).values)[0], :]
-targetData = targetData.iloc[np.nonzero((targetData["Y"] < 6.5).values)[0], :]
 
-# targetData = targetData.T
 # target data
 targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
 # print(type(targetMatrix))
@@ -49,7 +45,8 @@ targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
 # )
 
 # # rotate
-targetMatrix = np.dot(param.trans_init_103, targetMatrix)
+targetMatrix = np.dot(param.trans_init_103z, targetMatrix)
+targetMatrix = np.dot(param.trans_init_103x, targetMatrix)
 targetMatrix[0] = targetMatrix[0] + 2
 targetMatrix[1] = targetMatrix[1] + 3.5
 
@@ -64,17 +61,22 @@ targetMatrix = np.where(
     targetMatrix,
     param.outlier,
 )
+targetMatrix = np.where(
+    (targetMatrix[2] > param.z_min) & (targetMatrix[2] < param.z_max),
+    targetMatrix,
+    param.outlier,
+)
 
 targetMatrix = targetMatrix[:, np.all(targetMatrix != param.outlier, axis=0)]
-medX = statistics.median(targetMatrix[0])
-print(medX)
-medY = statistics.median(targetMatrix[1])
-print(medY)
-medZ = statistics.median(targetMatrix[2])
-print(medZ)
-targetMatrix[0] = targetMatrix[0] - medX
-targetMatrix[1] = targetMatrix[1] - medY
-targetMatrix[2] = targetMatrix[2] - medZ
+# medX = statistics.median(targetMatrix[0])
+# print(medX)
+# medY = statistics.median(targetMatrix[1])
+# print(medY)
+# medZ = statistics.median(targetMatrix[2])
+# print(medZ)
+# targetMatrix[0] = targetMatrix[0] - medX
+# targetMatrix[1] = targetMatrix[1] - medY
+# targetMatrix[2] = targetMatrix[2] - medZ
 
 targetMatrix = targetMatrix.T
 

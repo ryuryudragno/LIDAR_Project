@@ -18,31 +18,47 @@ def calc_distance(inputFrame):
     return (inputFrame["X"] ** 2 + inputFrame["Y"] ** 2 + inputFrame["Z"] ** 2) ** 0.5
 
 
-def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
+def distance_cut(sourceData, dist_data, dist_threshold):
     distance_cut = sourceData.iloc[
         np.nonzero((dist_data < dist_threshold).values)[0], :
     ]
-    distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
-    preprocessed_data = distance_cut.iloc[
-        np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
-    ]
+    # distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
+    # preprocessed_data = distance_cut.iloc[
+    #     np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
+    # ]
 
-    return preprocessed_data
+    return distance_cut
 
 
 # rotation and remove unnecessary data
-def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlier):
+def source_preprocess(
+    sourceData,
+    trans_init_z,
+    trans_init_x,
+    x_min,
+    x_max,
+    y_min,
+    y_max,
+    z_max,
+    z_min,
+    outlier,
+):
     source = o3.geometry.PointCloud()  # generate point_cloud
     sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
 
     # ここから回転 and cut
-    sourceMatrix = np.dot(trans_init, sourceMatrix)
+    sourceMatrix = np.dot(trans_init_z, sourceMatrix)
+    sourceMatrix = np.dot(trans_init_x, sourceMatrix)
 
     medX = statistics.median(sourceMatrix[0])
     medY = statistics.median(sourceMatrix[1])
+    print("中央値は\n")
+    print(medX)
+    print(medY)
+    print("\n")
 
     if medX < 0:
-        sourceMatrix[0] = sourceMatrix[0] + 2.03
+        sourceMatrix[0] = sourceMatrix[0] + 2
     if medY < 0:
         sourceMatrix[1] = sourceMatrix[1] + 3.5
 
@@ -52,22 +68,20 @@ def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlie
     sourceMatrix = np.where(
         (sourceMatrix[1] > y_min) & (sourceMatrix[1] < y_max), sourceMatrix, outlier
     )
+    sourceMatrix = np.where(
+        (sourceMatrix[2] > z_min) & (sourceMatrix[2] < z_max), sourceMatrix, outlier
+    )
     # axisで行か列かを指定できる
     sourceMatrix = sourceMatrix[:, np.all(sourceMatrix != outlier, axis=0)]
-    medX = statistics.median(sourceMatrix[0])
-    medY = statistics.median(sourceMatrix[1])
-    medZ = statistics.median(sourceMatrix[2])
-    print(medX)
-    print(medY)
-    print(medZ)
-    # if medY > 1.8:
-    #     sourceMatrix[2] = sourceMatrix[2] + 0
-    # if medZ > 0.2:
-    #     sourceMatrix[2] = sourceMatrix[2] - 0.2
-
-    sourceMatrix[0] = sourceMatrix[0] - medX
-    sourceMatrix[1] = sourceMatrix[1] - medY
-    sourceMatrix[2] = sourceMatrix[2] - medZ
+    # medX = statistics.median(sourceMatrix[0])
+    # medY = statistics.median(sourceMatrix[1])
+    # medZ = statistics.median(sourceMatrix[2])
+    # print(medX)
+    # print(medY)
+    # print(medZ)
+    # sourceMatrix[0] = sourceMatrix[0] - medX
+    # sourceMatrix[1] = sourceMatrix[1] - medY
+    # sourceMatrix[2] = sourceMatrix[2] - medZ
 
     sourceMatrix = sourceMatrix.T
 
@@ -84,7 +98,7 @@ def draw_registration_result(source, target, transformation):
     source_temp.transform(transformation)
     o3.visualization.draw_geometries(
         [source_temp, target_temp],
-        zoom=0.6559,
+        zoom=0.5559,
         front=[-0.5452, -0.836, -0.2011],
         lookat=[0, 0, 0],
         up=[-0.2779, -0.282, 0.1556],
@@ -112,11 +126,15 @@ def preprocess_point_cloud(pcd, voxel_size):
 def prepare_dataset(voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
+    m = 0
+    n = 1
+    sourceData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(m))
+    targetData = pd.read_csv("datasets_lidar/chair/chair_192168010%s.csv" % str(n))
     # sourceData = pd.read_csv("datasets_lidar/chair/chair_1921680100.csv")
     # targetData = pd.read_csv("datasets_lidar/chair/chair_1921680101.csv")
 
-    sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
-    targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
+    # sourceData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680100.csv")
+    # targetData = pd.read_csv("datasets_lidar/boxPosition1/boxPosition1_1921680101.csv")
     # sourceData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680100.csv")
     # targetData = pd.read_csv("datasets_lidar/boxPosition2/boxPosition2_1921680101.csv")
     # sourceData = pd.read_csv("datasets_lidar/crane/crane_1921680100.csv")
@@ -128,20 +146,23 @@ def prepare_dataset(voxel_size):
 
     dist_threshold = 10  # 閾値
 
-    # cut by height and distance from origin
-    sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, param.z_min_100)
-    targetData = z_cut(targetData, dist_targetData, dist_threshold, param.z_min_101)
+    # cut by (height) and distance from origin
+    sourceData = distance_cut(sourceData, dist_sourceData, dist_threshold)
+    targetData = distance_cut(targetData, dist_targetData, dist_threshold)
 
     # source data
     print("Transforming source data")
     # rotation and remove unnecessary data
     source = source_preprocess(
         sourceData,
-        param.trans_init_100,
+        param.transarray_z[m],
+        param.transarray_x[m],
         param.x_min,
         param.x_max,
         param.y_min,
         param.y_max,
+        param.z_max,
+        param.zmin[m],
         param.outlier,
     )
 
@@ -150,11 +171,14 @@ def prepare_dataset(voxel_size):
     # rotation and remove unnecessary data
     target = source_preprocess(
         targetData,
-        param.trans_init_101,
+        param.transarray_z[n],
+        param.transarray_x[n],
         param.x_min,
         param.x_max,
         param.y_min,
         param.y_max,
+        param.z_max,
+        param.zmin[n],
         param.outlier,
     )
     print(target)
@@ -278,7 +302,7 @@ if __name__ == "__main__":
         source_down, target_down, source_fpfh, target_fpfh, voxel_size
     )
     print(result_ransac)
-    draw_registration_result(source_down, target_down, result_ransac.transformation)
+    draw_registration_result(source, target, result_ransac.transformation)
 
     # print(source)
     # print(target)
@@ -288,11 +312,11 @@ if __name__ == "__main__":
     # print(target_fpfh)
 
     # # this does not work yet - error(refine)
-    # result_icp = refine_registration(
-    #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
-    # )
-    # print(result_icp)
-    # draw_registration_result(source, target, result_icp.transformation)
+    refine_icp = refine_registration(
+        source_down, target_down, source_fpfh, target_fpfh, voxel_size
+    )
+    print(refine_icp)
+    draw_registration_result(source, target, refine_icp.transformation)
 
     # 高速グローバル
     # start = time.time()
@@ -307,10 +331,10 @@ if __name__ == "__main__":
     trans_init = np.eye(4)
 
     # Point to point ICP
-    icp(source, target, threshold, trans_init)
+    # icp(source, target, threshold, trans_init)
 
     # ICP回数多め
-    icp_more(source, target, threshold, trans_init)
+    # icp_more(source, target, threshold, trans_init)
 
     # probreg
     # tf_param, _, _ = probreg.cpd.registration_cpd(source, target)

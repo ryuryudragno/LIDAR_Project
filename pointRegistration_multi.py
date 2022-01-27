@@ -17,25 +17,37 @@ def calc_distance(inputFrame):
     return (inputFrame["X"] ** 2 + inputFrame["Y"] ** 2 + inputFrame["Z"] ** 2) ** 0.5
 
 
-def z_cut(sourceData, dist_data, dist_threshold, z_threshold):
+def distance_cut(sourceData, dist_data, dist_threshold):
     distance_cut = sourceData.iloc[
         np.nonzero((dist_data < dist_threshold).values)[0], :
     ]
-    distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
-    preprocessed_data = distance_cut.iloc[
-        np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
-    ]
+    # distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
+    # preprocessed_data = distance_cut.iloc[
+    #     np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
+    # ]
 
-    return preprocessed_data
+    return distance_cut
 
 
 # rotation and remove unnecessary data
-def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlier):
+def source_preprocess(
+    sourceData,
+    trans_init_z,
+    trans_init_x,
+    x_min,
+    x_max,
+    y_min,
+    y_max,
+    z_max,
+    z_min,
+    outlier,
+):
     source = o3.geometry.PointCloud()  # generate point_cloud
     sourceMatrix = np.array([sourceData["X"], sourceData["Y"], sourceData["Z"]])
 
     # ここから回転 and cut
-    sourceMatrix = np.dot(trans_init, sourceMatrix)
+    sourceMatrix = np.dot(trans_init_z, sourceMatrix)
+    sourceMatrix = np.dot(trans_init_x, sourceMatrix)
 
     medX = statistics.median(sourceMatrix[0])
     medY = statistics.median(sourceMatrix[1])
@@ -51,14 +63,17 @@ def source_preprocess(sourceData, trans_init, x_min, x_max, y_min, y_max, outlie
     sourceMatrix = np.where(
         (sourceMatrix[1] > y_min) & (sourceMatrix[1] < y_max), sourceMatrix, outlier
     )
+    sourceMatrix = np.where(
+        (sourceMatrix[2] > z_min) & (sourceMatrix[2] < z_max), sourceMatrix, outlier
+    )
     # axisで行か列かを指定できる
     sourceMatrix = sourceMatrix[:, np.all(sourceMatrix != outlier, axis=0)]
-    medX = statistics.median(sourceMatrix[0])
-    medY = statistics.median(sourceMatrix[1])
-    medZ = statistics.median(sourceMatrix[2])
-    sourceMatrix[0] = sourceMatrix[0] - medX
-    sourceMatrix[1] = sourceMatrix[1] - medY
-    sourceMatrix[2] = sourceMatrix[2] - medZ
+    # medX = statistics.median(sourceMatrix[0])
+    # medY = statistics.median(sourceMatrix[1])
+    # medZ = statistics.median(sourceMatrix[2])
+    # sourceMatrix[0] = sourceMatrix[0] - medX
+    # sourceMatrix[1] = sourceMatrix[1] - medY
+    # sourceMatrix[2] = sourceMatrix[2] - medZ
 
     sourceMatrix = sourceMatrix.T
 
@@ -92,25 +107,28 @@ def prepare_dataset(voxel_size):
         #     "datasets_lidar/boxPosition1/boxPosition1_192168010%s.csv" % str(i)
         # )
         # sourceData = pd.read_csv(
-        #     "datasets_lidar/boxPosition2/boxPosition2_192168010%s.csv" % str(i)
+        #     "datasets_lidar/rubishBin/rubishBin_192168010%s.csv" % str(i)
         # )
 
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
 
         # print(sourceData(dist_sourceData>20))
-        sourceData = z_cut(sourceData, dist_sourceData, dist_threshold, param.z_min_101)
+        sourceData = distance_cut(sourceData, dist_sourceData, dist_threshold)
         # print(sourceData)
 
         # source data
         print("Transforming source data")
         source = source_preprocess(
             sourceData,
-            param.transarray[i],
+            param.transarray_z[i],
+            param.transarray_x[i],
             param.x_min,
             param.x_max,
             param.y_min,
             param.y_max,
+            param.z_max,
+            param.zmin[i],
             param.outlier,
         )
 
@@ -252,7 +270,7 @@ if __name__ == "__main__":
     print(pcds_down)
     o3.visualization.draw_geometries(
         pcds_down,
-        zoom=0.6559,
+        zoom=0.5559,
         front=[-0.5452, -0.836, -0.2011],
         lookat=[0, 0, 0],
         up=[-0.2779, -0.282, 0.1556],
@@ -284,6 +302,8 @@ if __name__ == "__main__":
             o3.pipelines.registration.GlobalOptimizationConvergenceCriteria(),
             option,
         )
+    
+    
 
     # # 7
     print("Transform points and display")
@@ -297,64 +317,3 @@ if __name__ == "__main__":
         lookat=[0, 0, 0],
         up=[-0.2779, -0.282, 0.1556],
     )
-
-    # result_ransac = execute_global_registration(
-    #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
-    # )
-    # print(result_ransac)
-
-    # draw_registration_result(source_down, target_down,
-    #                          result_ransac.transformation)
-
-    # this does not work yet - error
-    # result_icp = refine_registration(source, target, source_fpfh, target_fpfh,
-    #                                  voxel_size)
-    # print(result_icp)
-    # draw_registration_result(source, target, result_icp.transformation)
-
-    ###今はここは使ってない
-
-
-# def execute_global_registration(
-#     source_down, target_down, source_fpfh, target_fpfh, voxel_size
-# ):
-#     distance_threshold = voxel_size * 1.5
-#     print(":: RANSAC registration on downsampled point clouds.")
-#     print("   Since the downsampling voxel size is %.3f," % voxel_size)
-#     print("   we use a liberal distance threshold %.3f." % distance_threshold)
-#     result = o3.pipelines.registration.registration_ransac_based_on_feature_matching(
-#         source_down,
-#         target_down,
-#         source_fpfh,
-#         target_fpfh,
-#         True,
-#         distance_threshold,
-#         o3.pipelines.registration.TransformationEstimationPointToPoint(False),
-#         3,
-#         [
-#             o3.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-#             o3.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
-#                 distance_threshold
-#             ),
-#         ],
-#         o3.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999),
-#     )
-#     return result
-
-
-# def refine_registration(source, target, source_fpfh, target_fpfh, voxel_size):
-#     distance_threshold = voxel_size * 0.4
-#     print(":: Point-to-plane ICP registration is applied on original point")
-#     print("   clouds to refine the alignment. This time we use a strict")
-#     print("   distance threshold %.3f." % distance_threshold)
-#     result = o3.pipelines.registration.registration_icp(
-#         source,
-#         target,
-#         distance_threshold,
-#         result_ransac.transformation,
-#         o3.pipelines.registration.TransformationEstimationPointToPlane(),
-#     )
-#     return result
-
-
-###

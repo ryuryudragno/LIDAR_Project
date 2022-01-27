@@ -26,18 +26,14 @@ dist_threshold = 20  # 閾値
 targetData = targetData.iloc[
     np.nonzero((dist_targetData < dist_threshold).values)[0], :
 ]
-targetData = targetData.iloc[np.nonzero((targetData["Z"] > -0.35).values)[0], :]
-targetData = targetData.iloc[np.nonzero((targetData["Z"] < 0.8).values)[0], :]
-targetData = targetData.iloc[np.nonzero((targetData["Y"] < 6.5).values)[0], :]
 
-# targetData = targetData.T
 # target data
 targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
 # print(type(targetMatrix))
 # print((targetMatrix))
 
 
-trans_init = np.asarray(
+trans_init_z = np.asarray(
     [
         [2 / math.sqrt(5), -1 / math.sqrt(5), 0],
         [1 / math.sqrt(5), 2 / math.sqrt(5), 0.0],
@@ -45,20 +41,35 @@ trans_init = np.asarray(
     ]
 )
 
+# 5度くらい回転
+trans_init_x = np.asarray(
+    [
+        [1, 0, 0],
+        [0, 0.996, -0.0879],
+        [0.0, 0.0879, 0.996],
+    ]
+)
+
 # rotate
-targetMatrix = np.dot(param.trans_init_100, targetMatrix)
+targetMatrix = np.dot(param.trans_init_100z, targetMatrix)
+targetMatrix = np.dot(param.trans_init_100x, targetMatrix)
 
 targetMatrix[0] = targetMatrix[0] + 2
 
 
 # 整理
-# targetMatrix = np.where(
-#     (targetMatrix[0] > param.x_min) & (targetMatrix[0] < param.x_max),
-#     targetMatrix,
-#     param.outlier,
-# )
+targetMatrix = np.where(
+    (targetMatrix[0] > param.x_min) & (targetMatrix[0] < param.x_max),
+    targetMatrix,
+    param.outlier,
+)
 targetMatrix = np.where(
     (targetMatrix[1] > param.y_min) & (targetMatrix[1] < param.y_max),
+    targetMatrix,
+    param.outlier,
+)
+targetMatrix = np.where(
+    (targetMatrix[2] > param.z_min) & (targetMatrix[2] < param.z_max),
     targetMatrix,
     param.outlier,
 )
@@ -72,7 +83,7 @@ medZ = statistics.median(targetMatrix[2])
 print(medZ)
 targetMatrix[0] = targetMatrix[0] - medX
 targetMatrix[1] = targetMatrix[1] - medY
-targetMatrix[2] = targetMatrix[2] - medZ
+# targetMatrix[2] = targetMatrix[2] - medZ
 
 targetMatrix = targetMatrix.T
 

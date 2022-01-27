@@ -26,10 +26,10 @@ dist_threshold = 10  # 閾値
 targetData = targetData.iloc[
     np.nonzero((dist_targetData < dist_threshold).values)[0], :
 ]
-targetData = targetData.iloc[
-    np.nonzero((targetData["Z"] > param.z_min_101).values)[0], :
-]
-targetData = targetData.iloc[np.nonzero((targetData["Z"] < 0.8).values)[0], :]
+# targetData = targetData.iloc[
+#     np.nonzero((targetData["Z"] > param.z_min_101).values)[0], :
+# ]
+# targetData = targetData.iloc[np.nonzero((targetData["Z"] < 0.8).values)[0], :]
 targetData = targetData.iloc[np.nonzero((targetData["Y"] < 6.5).values)[0], :]
 
 # targetData = targetData.T
@@ -38,11 +38,11 @@ targetMatrix = np.array([targetData["X"], targetData["Y"], targetData["Z"]])
 # print(type(targetMatrix))
 # print((targetMatrix))
 
-
-trans_init = param.trans_init_101
+# trans_init = param.trans_init_101z
 
 # rotate
-targetMatrix = np.dot(trans_init, targetMatrix)
+targetMatrix = np.dot(param.trans_init_101z, targetMatrix)
+targetMatrix = np.dot(param.trans_init_101x, targetMatrix)
 
 # 整理
 targetMatrix = np.where(
