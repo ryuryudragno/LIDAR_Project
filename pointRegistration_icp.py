@@ -65,8 +65,8 @@ def source_preprocess(
         sourceMatrix[0] = sourceMatrix[0] + 2
     if medY < 0:
         sourceMatrix[1] = sourceMatrix[1] + 3.5
-    # if medZ < 0.1:
-    #     sourceMatrix[2] = sourceMatrix[2] + 0.2
+    if medZ < 0.1:
+        sourceMatrix[2] = sourceMatrix[2] + 0.2
 
     # Cut
     sourceMatrix = np.where(
@@ -102,7 +102,7 @@ def draw_registration_result(source, target, transformation):
     target_temp = copy.deepcopy(target)
     source_temp.paint_uniform_color([1, 0.506, 0])  # 100 is red
     target_temp.paint_uniform_color([0, 0.651, 0.929])  # 101 is blue
-    source_temp.transform(transformation)
+    target_temp.transform(transformation)
     o3.visualization.draw_geometries(
         [source_temp, target_temp],
         zoom=0.5559,
@@ -182,6 +182,9 @@ def prepare_dataset(voxel_size, i, m, n):
         param.outlier,
     )
     print(target)
+
+    # source = source.transform(param.trans_carib[m])
+    # target = target.transform(param.trans_carib[n])
     # 事前処理後
     draw_registration_result(source, target, np.identity(4))
 
@@ -231,7 +234,7 @@ def refine_registration(source, target, source_fpfh, target_fpfh, voxel_size):
         source,
         target,
         distance_threshold,
-        result_ransac.transformation,
+        np.eye(4),
         o3.pipelines.registration.TransformationEstimationPointToPlane(),
     )
     return result
@@ -291,7 +294,7 @@ if __name__ == "__main__":
     voxel_size = 0.04  # means 5cm for the dataset
     i = 3
     m = 0
-    n = 3
+    n = 2
     (
         source,
         target,
@@ -301,42 +304,26 @@ if __name__ == "__main__":
         target_fpfh,
     ) = prepare_dataset(voxel_size, i, m, n)
 
-    result_ransac = execute_global_registration(
-        source_down, target_down, source_fpfh, target_fpfh, voxel_size
-    )
-    print("Global_registration後")
-    print(result_ransac)
-    draw_registration_result(source, target, result_ransac.transformation)
-
-    # print(source)
-    # print(target)
-    # print(source_down)
-    # print(target_down)
-    # print(source_fpfh)
-    # print(target_fpfh)
-
-    # # this does not work yet - error(refine)
-    refine_icp = refine_registration(
-        source_down, target_down, source_fpfh, target_fpfh, voxel_size
-    )
-    print("refine後")
-    print(refine_icp)
-    # draw_registration_result(source, target, refine_icp.transformation)
-
-    # # rapid_global
-    # start = time.time()
-    # result_fast = execute_fast_global_registration(
+    # result_ransac = execute_global_registration(
     #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
     # )
-    # print("Fast global registration took %.3f sec.\n" % (time.time() - start))
-    # print(result_fast)
-    # draw_registration_result(source_down, target_down, result_fast.transformation)
+    # print("Global_registration後")
+    # print(result_ransac)
+    # draw_registration_result(source, target, result_ransac.transformation)
+
+    # # this does not work yet - error(refine)
+    # refine_icp = refine_registration(
+    #     source_down, target_down, source_fpfh, target_fpfh, voxel_size
+    # )
+    # print("refine後")
+    # print(refine_icp)
+    # draw_registration_result(source, target, refine_icp.transformation)
 
     threshold = 0.02
     trans_init = np.eye(4)
 
     # # Point to point ICP
-    # icp(source, target, threshold, result_ransac.transformation)
+    icp(source, target, threshold, param.trans_carib[n])
     # icp(source, target, threshold, refine_icp.transformation)
 
     # ICP回数多め

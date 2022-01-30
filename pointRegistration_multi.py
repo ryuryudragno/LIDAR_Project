@@ -41,6 +41,7 @@ def source_preprocess(
     y_max,
     z_max,
     z_min,
+    z_adjust,
     outlier,
 ):
     source = o3.geometry.PointCloud()  # generate point_cloud
@@ -59,8 +60,9 @@ def source_preprocess(
         sourceMatrix[0] = sourceMatrix[0] + 2
     if medY < 0:
         sourceMatrix[1] = sourceMatrix[1] + 3.5
-    if medZ < 0.1:
-        sourceMatrix[2] = sourceMatrix[2] + 0.2
+    # if medZ < 0.1:
+    #     sourceMatrix[2] = sourceMatrix[2] + 0.2
+    sourceMatrix[2] = sourceMatrix[2] + z_adjust
 
     sourceMatrix = np.where(
         (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
@@ -99,7 +101,7 @@ def preprocess_point_cloud(pcd, voxel_size):
     return pcd_down
 
 
-def prepare_dataset(voxel_size):
+def prepare_dataset(voxel_size, num):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
 
@@ -110,7 +112,7 @@ def prepare_dataset(voxel_size):
         # read the data
         # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
         # 6→rubbishBin_bricks,7→two_Bricks
-        sourceData = pd.read_csv(param.readData_multi[3] % str(i))
+        sourceData = pd.read_csv(param.readData_multi[num] % str(i))
 
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
@@ -132,6 +134,7 @@ def prepare_dataset(voxel_size):
             param.y_max,
             param.z_max,
             param.z_min[i],
+            param.z_adjust[i],
             param.outlier,
         )
 
@@ -201,9 +204,7 @@ def full_registration(
     odometry = np.identity(4)
     pose_graph.nodes.append(o3.pipelines.registration.PoseGraphNode(odometry))
     n_pcds = len(pcds)
-    # so = []
-    # ta = []
-    # res_ran = []
+
     for source_id in range(n_pcds):
         for target_id in range(source_id + 1, n_pcds):
             transformation_icp, information_icp = pairwise_registration(
@@ -266,19 +267,22 @@ def execute_global_registration(
 
 
 if __name__ == "__main__":
-    voxel_size = 0.01  # means 5cm for the dataset
-    sources, pcds_down = prepare_dataset(voxel_size)
+    voxel_size = 0.02  # means 5cm for the dataset
+    # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
+    # 6→rubbishBin_bricks,7→two_Bricks
+    n = 3
+    sources, pcds_down = prepare_dataset(voxel_size, n)
 
     # 入力の点群を準備したやつ表示
     # print("\npcd_downsは\n")
     print(pcds_down)
-    # o3.visualization.draw_geometries(
-    #     pcds_down,
-    #     zoom=0.5559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
-    # )
+    o3.visualization.draw_geometries(
+        pcds_down,
+        zoom=0.5559,
+        front=[-0.5452, -0.836, -0.2011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.1556],
+    )
 
     # # 5
     # print("Full registration ...")
@@ -325,10 +329,17 @@ if __name__ == "__main__":
     o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
     o3.visualization.draw_geometries(
         [pcd_combined_down],
+        width=1920,
+        height=1080,
+        left=50,
+        top=50,
+        point_show_normal=False,
+        mesh_show_wireframe=False,
+        mesh_show_back_face=False,
         zoom=0.6559,
-        front=[-0.5452, -0.836, -0.2011],
+        front=[-0.5452, -0.736, -0.3011],
         lookat=[0, 0, 0],
-        up=[-0.2779, -0.282, 0.1556],
+        up=[-0.2779, -0.282, 0.2556],
     )
 
     # # 8

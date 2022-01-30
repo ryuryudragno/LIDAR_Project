@@ -12,10 +12,11 @@ def calc_distance(inputFrame):
     return (inputFrame["X"] ** 2 + inputFrame["Y"] ** 2 + inputFrame["Z"] ** 2) ** 0.5
 
 
+ob = 3
 m = 3
 # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
 # 6→rubbishBin_bricks,7→two_Bricks
-sourceData = pd.read_csv(param.readData_multi[3] % str(m))
+sourceData = pd.read_csv(param.readData_multi[ob] % str(m))
 
 ## remove outliers which are further away then 10 meters
 dist_targetData = calc_distance(sourceData)
@@ -49,8 +50,7 @@ if medX < 0:
     sourceMatrix[0] = sourceMatrix[0] + 2
 if medY < 0:
     sourceMatrix[1] = sourceMatrix[1] + 3.5
-if medZ < 0.1:
-    sourceMatrix[2] = sourceMatrix[2] + 0.2
+# sourceMatrix[2] = sourceMatrix[2] + param.z_adjust[m]
 
 
 # 整理

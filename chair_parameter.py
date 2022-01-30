@@ -95,7 +95,7 @@ trans_init_102x = np.asarray(
         [0.0, -0.0879, 0.996],
     ]
 )
-# 2度回転
+# 3度回転
 trans_init_103x = np.asarray(
     [
         [1, 0, 0],
@@ -104,7 +104,15 @@ trans_init_103x = np.asarray(
     ]
 )
 
-# 度回転
+# -2度回転
+# trans_init_102y = np.asarray(
+#     [
+#         [0.9986, 0, -0.0523],
+#         [0, 1, 0],
+#         [0.0523, 0.0, 0.9986],
+#     ]
+# )
+# 3度回転
 trans_init_103y = np.asarray(
     [
         [0.9986, 0, 0.0523],
@@ -112,7 +120,8 @@ trans_init_103y = np.asarray(
         [-0.0523, 0.0, 0.9986],
     ]
 )
-trans_init_100y = trans_init_101y = trans_init_102y = np.eye(3)
+trans_init_100y = trans_init_101y = np.eye(3)
+trans_init_102y = np.eye(3)
 
 transarray_z = [trans_init_100z, trans_init_101z, trans_init_102z, trans_init_103z]
 transarray_x = [trans_init_100x, trans_init_101x, trans_init_102x, trans_init_103x]
@@ -121,15 +130,48 @@ transarray_y = [trans_init_100y, trans_init_101y, trans_init_102y, trans_init_10
 # print(transarray[0])
 # print(trans_init_100)
 
+
+z_adjust = [0, 0.2, 0, 0]
+
+readData_multi = [
+    "datasets_lidar/boxBinBrickets/boxBinBrickets_192168010%s.csv",
+    "datasets_lidar/boxPosition1/boxPosition1_192168010%s.csv",
+    "datasets_lidar/boxPosition2/boxPosition2_192168010%s.csv",
+    "datasets_lidar/chair/chair_192168010%s.csv",
+    "datasets_lidar/crane/crane_192168010%s.csv",
+    "datasets_lidar/rubishBin/rubishBin_192168010%s.csv",
+    "datasets_lidar/rubishBinWithBricks/rubishBinWithBricks_192168010%s.csv",
+    "datasets_lidar/twoBricks/twoBricks_192168010%s.csv",
+]
+
 trans_carib1 = np.eye(4)
+# 最初に上手くいったやつ(103回転)
 # trans_carib2 = np.asarray(
 #     [
-#         [0.999, 0.0393, 0.0112, -0.0771],
-#         [-0.0394, 0, 0, 0],
-#         [1, 0, 0, 0],
-#         [1, 0, 0, 0],
+#         [9.99163125e-01, 3.93122295e-02, 1.12959418e-02, -7.71988079e-02],
+#         [-3.94155018e-02, 9.99181742e-01, 9.06998369e-03, 1.55506416e-01],
+#         [-1.09301375e-02, -9.50762846e-03, 9.99895063e-01, -3.97856370e-04],
+#         [0.00000000e00, 0.00000000e00, 0.00000000e00, 1.00000000e00],
 #     ]
 # )
+# trans_carib3 = np.asarray(
+#     [
+#         [0.99639894, -0.0410268, -0.07420213, 0.04774881],
+#         [0.04052159, 0.99914417, -0.00830186, 0.01895619],
+#         [0.07447922, 0.00526518, 0.99720867, -0.02751265],
+#         [0, 0, 0, 1],
+#     ]
+# )
+# trans_carib4 = np.asarray(
+#     [
+#         [0.99077428, -0.11546527, 0.07095144, 0.35902327],
+#         [0.11392439, 0.9931645, 0.02540688, -0.11939477],
+#         [-0.07340006, -0.01708939, 0.99715615, 0.22807331],
+#         [0, 0, 0, 1],
+#     ]
+# )
+
+# 2番目に上手く行ったやつ(103回転+z調整)chair
 trans_carib2 = np.asarray(
     [
         [0.99924652, 0.03723041, 0.01096773, -0.07560901],
@@ -155,43 +197,30 @@ trans_carib4 = np.asarray(
     ]
 )
 
-
-trans_carib = [trans_carib1, trans_carib2, trans_carib3, trans_carib4]
-
-
-readData_multi = [
-    "datasets_lidar/boxBinBrickets/boxBinBrickets_192168010%s.csv",
-    "datasets_lidar/boxPosition1/boxPosition1_192168010%s.csv",
-    "datasets_lidar/boxPosition2/boxPosition2_192168010%s.csv",
-    "datasets_lidar/chair/chair_192168010%s.csv",
-    "datasets_lidar/crane/crane_192168010%s.csv",
-    "datasets_lidar/rubishBin/rubishBin_192168010%s.csv",
-    "datasets_lidar/rubishBinWithBricks/rubishBinWithBricks_192168010%s.csv",
-    "datasets_lidar/twoBricks/twoBricks_192168010%s.csv",
-]
-
-# 最初に上手くいったやつ
+# 上手く行ってないやつ(前処理しすぎると良くない？)
 # trans_carib2 = np.asarray(
 #     [
-#         [9.99163125e-01, 3.93122295e-02, 1.12959418e-02, -7.71988079e-02],
-#         [-3.94155018e-02, 9.99181742e-01, 9.06998369e-03, 1.55506416e-01],
-#         [-1.09301375e-02, -9.50762846e-03, 9.99895063e-01, -3.97856370e-04],
-#         [0.00000000e00, 0.00000000e00, 0.00000000e00, 1.00000000e00],
+#         [0.99981866, 0.01722859, 0.00811319, -0.02561457],
+#         [-0.01732874, 0.99977244, 0.0124409, 0.12155731],
+#         [-0.007897, -0.01257924, 0.99988969, -0.19687681],
+#         [0, 0, 0, 1],
 #     ]
 # )
 # trans_carib3 = np.asarray(
 #     [
-#         [0.99639894, -0.0410268, -0.07420213, 0.04774881],
-#         [0.04052159, 0.99914417, -0.00830186, 0.01895619],
-#         [0.07447922, 0.00526518, 0.99720867, -0.02751265],
+#         [0.99635377, 0.03780863, -0.07648313, -0.1024651],
+#         [-0.03841122, 0.99924138, -0.0064225, 0.06594167],
+#         [0.07618228, 0.00933689, 0.99705019, -0.03409744],
 #         [0, 0, 0, 1],
 #     ]
 # )
 # trans_carib4 = np.asarray(
 #     [
-#         [0.99077428, -0.11546527, 0.07095144, 0.35902327],
-#         [0.11392439, 0.9931645, 0.02540688, -0.11939477],
-#         [-0.07340006, -0.01708939, 0.99715615, 0.22807331],
+#         [0.99529233, -0.09141937, 0.03218208, 0.31186854],
+#         [0.09113914, 0.99578723, 0.01007237, -0.13355983],
+#         [-0.03296732, -0.00709191, 0.99943127, 0.08750026],
 #         [0, 0, 0, 1],
 #     ]
 # )
+
+trans_carib = [trans_carib1, trans_carib2, trans_carib3, trans_carib4]

@@ -41,6 +41,7 @@ def source_preprocess(
     y_max,
     z_max,
     z_min,
+    z_adjust,
     outlier,
 ):
     source = o3.geometry.PointCloud()  # generate point_cloud
@@ -54,13 +55,16 @@ def source_preprocess(
     medX = statistics.median(sourceMatrix[0])
     medY = statistics.median(sourceMatrix[1])
     medZ = statistics.median(sourceMatrix[2])
+    minZ = min(sourceMatrix[2])
+    print("\n最低値は")
+    print(minZ)
 
     if medX < 0:
         sourceMatrix[0] = sourceMatrix[0] + 2
     if medY < 0:
         sourceMatrix[1] = sourceMatrix[1] + 3.5
-    if medZ < 0.1:
-        sourceMatrix[2] = sourceMatrix[2] + 0.2
+
+    sourceMatrix[2] = sourceMatrix[2] + z_adjust
 
     sourceMatrix = np.where(
         (sourceMatrix[0] > x_min) & (sourceMatrix[0] < x_max), sourceMatrix, outlier
@@ -73,12 +77,6 @@ def source_preprocess(
     )
     # axisで行か列かを指定できる
     sourceMatrix = sourceMatrix[:, np.all(sourceMatrix != outlier, axis=0)]
-    # medX = statistics.median(sourceMatrix[0])
-    # medY = statistics.median(sourceMatrix[1])
-    # medZ = statistics.median(sourceMatrix[2])
-    # sourceMatrix[0] = sourceMatrix[0] - medX
-    # sourceMatrix[1] = sourceMatrix[1] - medY
-    # sourceMatrix[2] = sourceMatrix[2] - medZ
 
     sourceMatrix = sourceMatrix.T
 
@@ -99,7 +97,7 @@ def preprocess_point_cloud(pcd, voxel_size):
     return pcd_down
 
 
-def prepare_dataset(voxel_size):
+def prepare_dataset(voxel_size, num):
     print(":: Load two point clouds and disturb initial pose.")
     print("Loading files")
 
@@ -108,9 +106,7 @@ def prepare_dataset(voxel_size):
     dist_threshold = 10  # 距離の閾値(原点から遠すぎるものを排除？)
     for i in range(4):
         # read the data
-        # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
-        # 6→rubbishBin_bricks,7→two_Bricks
-        sourceData = pd.read_csv(param.readData_multi[3] % str(i))
+        sourceData = pd.read_csv(param.readData_multi[num] % str(i))
 
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
@@ -132,6 +128,7 @@ def prepare_dataset(voxel_size):
             param.y_max,
             param.z_max,
             param.z_min[i],
+            param.z_adjust[i],
             param.outlier,
         )
 
@@ -266,19 +263,22 @@ def execute_global_registration(
 
 
 if __name__ == "__main__":
-    voxel_size = 0.05  # means 5cm for the dataset
-    sources, pcds_down = prepare_dataset(voxel_size)
+    voxel_size = 0.04  # means 5cm for the dataset
+    # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
+    # 6→rubbishBin_bricks,7→two_Bricks
+    n = 2
+    sources, pcds_down = prepare_dataset(voxel_size, n)
 
     # 入力の点群を準備したやつ表示
     # print("\npcd_downsは\n")
     print(pcds_down)
-    # o3.visualization.draw_geometries(
-    #     pcds_down,
-    #     zoom=0.5559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
-    # )
+    o3.visualization.draw_geometries(
+        pcds_down,
+        zoom=0.5559,
+        front=[-0.5452, -0.836, -0.2011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.1556],
+    )
 
     # # 5
     # print("Full registration ...")
