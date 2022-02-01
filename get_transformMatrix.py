@@ -263,10 +263,10 @@ def execute_global_registration(
 
 
 if __name__ == "__main__":
-    voxel_size = 0.04  # means 5cm for the dataset
+    voxel_size = 0.05  # means 5cm for the dataset
     # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
     # 6→rubbishBin_bricks,7→two_Bricks
-    n = 2
+    n = 3
     sources, pcds_down = prepare_dataset(voxel_size, n)
 
     # 入力の点群を準備したやつ表示

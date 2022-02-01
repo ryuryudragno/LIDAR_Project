@@ -42,6 +42,7 @@ def source_preprocess(
     z_max,
     z_min,
     z_adjust,
+    trans_carib,
     outlier,
 ):
     source = o3.geometry.PointCloud()  # generate point_cloud
@@ -85,6 +86,7 @@ def source_preprocess(
     sourceMatrix = sourceMatrix.T
 
     source.points = o3.utility.Vector3dVector(sourceMatrix)
+    # source.transform(trans_carib)
 
     return source
 
@@ -135,6 +137,7 @@ def prepare_dataset(voxel_size, num):
             param.z_max,
             param.z_min[i],
             param.z_adjust[i],
+            param.trans_carib[i],
             param.outlier,
         )
 
