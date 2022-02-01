@@ -42,6 +42,7 @@ def source_preprocess(
     z_max,
     z_min,
     z_adjust,
+    trans_carib,
     outlier,
 ):
     source = o3.geometry.PointCloud()  # generate point_cloud
@@ -81,6 +82,7 @@ def source_preprocess(
     sourceMatrix = sourceMatrix.T
 
     source.points = o3.utility.Vector3dVector(sourceMatrix)
+    source.transform(trans_carib)
 
     return source
 
@@ -129,6 +131,7 @@ def prepare_dataset(voxel_size, num):
             param.z_max,
             param.z_min[i],
             param.z_adjust[i],
+            param.trans_carib[i],
             param.outlier,
         )
 
@@ -274,6 +277,13 @@ if __name__ == "__main__":
     print(pcds_down)
     o3.visualization.draw_geometries(
         pcds_down,
+        width=1920,
+        height=720,
+        left=50,
+        top=50,
+        point_show_normal=False,
+        mesh_show_wireframe=False,
+        mesh_show_back_face=False,
         zoom=0.5559,
         front=[-0.5452, -0.836, -0.2011],
         lookat=[0, 0, 0],
@@ -309,11 +319,22 @@ if __name__ == "__main__":
 
     # # 7
     print("Transform points and display")
+    pcd_combined = o3.geometry.PointCloud()
     for point_id in range(len(pcds_down)):
         print(pose_graph.nodes[point_id].pose)
         pcds_down[point_id].transform(pose_graph.nodes[point_id].pose)
+        pcd_combined += pcds_down[point_id]
+    pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
+
     o3.visualization.draw_geometries(
-        pcds_down,
+        [pcd_combined_down],
+        width=1920,
+        height=720,
+        left=50,
+        top=50,
+        point_show_normal=False,
+        mesh_show_wireframe=False,
+        mesh_show_back_face=False,
         zoom=0.6559,
         front=[-0.5452, -0.836, -0.2011],
         lookat=[0, 0, 0],

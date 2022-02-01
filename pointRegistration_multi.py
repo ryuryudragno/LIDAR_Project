@@ -288,7 +288,7 @@ if __name__ == "__main__":
     )
 
     # # 5
-    # print("Full registration ...")
+    print("Full registration ...")
     max_correspondence_distance_coarse = voxel_size * 15
     max_correspondence_distance_fine = voxel_size * 1.5
     with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
@@ -329,11 +329,11 @@ if __name__ == "__main__":
     #     up=[-0.2779, -0.282, 0.1556],
     # )
     pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
-    o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
+    # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
     o3.visualization.draw_geometries(
         [pcd_combined_down],
         width=1920,
-        height=1080,
+        height=720,
         left=50,
         top=50,
         point_show_normal=False,
