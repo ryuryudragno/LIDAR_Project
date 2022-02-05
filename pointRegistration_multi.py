@@ -6,6 +6,7 @@ import numpy as np
 import copy
 
 import chair_parameter as param
+import read_video_csv as vd
 
 # 複数点
 # http://www.open3d.org/docs/0.13.0/tutorial/pipelines/multiway_registration.html
@@ -114,7 +115,8 @@ def prepare_dataset(voxel_size, num):
         # read the data
         # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
         # 6→rubbishBin_bricks,7→two_Bricks
-        sourceData = pd.read_csv(param.readData_multi[num] % str(i))
+        # sourceData = pd.read_csv(param.readData_multi[num] % str(i))
+        sourceData = pd.read_csv(vd.readData_test[0] % str(i))
 
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
@@ -218,6 +220,7 @@ def full_registration(
                 odometry = np.dot(transformation_icp, odometry)
                 pose_graph.nodes.append(
                     o3.pipelines.registration.PoseGraphNode(np.linalg.inv(odometry))
+                    # 逆行列を求めている
                 )
                 pose_graph.edges.append(
                     o3.pipelines.registration.PoseGraphEdge(
@@ -277,15 +280,15 @@ if __name__ == "__main__":
     sources, pcds_down = prepare_dataset(voxel_size, n)
 
     # 入力の点群を準備したやつ表示
-    # print("\npcd_downsは\n")
+    print("\npcd_downsは\n")
     print(pcds_down)
-    o3.visualization.draw_geometries(
-        pcds_down,
-        zoom=0.5559,
-        front=[-0.5452, -0.836, -0.2011],
-        lookat=[0, 0, 0],
-        up=[-0.2779, -0.282, 0.1556],
-    )
+    # o3.visualization.draw_geometries(
+    #     pcds_down,
+    #     zoom=0.5559,
+    #     front=[-0.5452, -0.836, -0.2011],
+    #     lookat=[0, 0, 0],
+    #     up=[-0.2779, -0.282, 0.1556],
+    # )
 
     # # 5
     print("Full registration ...")
@@ -316,18 +319,16 @@ if __name__ == "__main__":
 
     # # 7
     print("Transform points and display")
+    # print(pose_graph.nodes)
+    # print("\n")
+    # print(pose_graph.edges)
     pcd_combined = o3.geometry.PointCloud()
     for point_id in range(len(pcds_down)):
         print(pose_graph.nodes[point_id].pose)
+        # print(pose_graph.edges[point_id])
         pcds_down[point_id].transform(param.trans_carib[point_id])
         pcd_combined += pcds_down[point_id]
-    # o3.visualization.draw_geometries(
-    #     pcds_down,
-    #     zoom=0.6559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
-    # )
+
     pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
     # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
     o3.visualization.draw_geometries(
@@ -344,20 +345,10 @@ if __name__ == "__main__":
         lookat=[0, 0, 0],
         up=[-0.2779, -0.282, 0.2556],
     )
-
-    # # 8
-    # sources, pcds = prepare_dataset(voxel_size)
-    # pcd_combined = o3.geometry.PointCloud()
-    # for point_id in range(len(pcds)):
-    #     pcds[point_id].transform(param.trans_carib[point_id])
-    #     pcd_combined += pcds[point_id]
-
-    # pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
-    # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
-    # o3.visualization.draw_geometries(
+    # o3.visualization.draw_geometries_with_animation_callback(
     #     [pcd_combined_down],
-    #     zoom=0.6559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
+    #     width=1920,
+    #     height=720,
+    #     left=50,
+    #     top=50,
     # )

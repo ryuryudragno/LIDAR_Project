@@ -6,6 +6,7 @@ import numpy as np
 import copy
 
 import chair_parameter as param
+import read_video_csv as vd
 
 # 複数点
 # http://www.open3d.org/docs/0.13.0/tutorial/pipelines/multiway_registration.html
@@ -108,8 +109,8 @@ def prepare_dataset(voxel_size, num):
     dist_threshold = 10  # 距離の閾値(原点から遠すぎるものを排除？)
     for i in range(4):
         # read the data
-        sourceData = pd.read_csv(param.readData_multi[num] % str(i))
-
+        # sourceData = pd.read_csv(param.readData_multi[num] % str(i))
+        sourceData = pd.read_csv(vd.readData_test[0] % str(i))
         # remove outliers which are further away then 10 meters
         dist_sourceData = calc_distance(sourceData)  # 原点からの距離を計算
 

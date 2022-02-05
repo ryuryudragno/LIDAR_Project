@@ -72,7 +72,9 @@ sourceMatrix = np.where(
 
 sourceMatrix = sourceMatrix[:, np.all(sourceMatrix != param.outlier, axis=0)]
 
+
 sourceMatrix = sourceMatrix.T
+print(type(sourceMatrix))
 
 # 3D散布図でプロットするデータを生成する為にnumpyを使用
 X = sourceMatrix[:, 0]  # 自然数の配列
