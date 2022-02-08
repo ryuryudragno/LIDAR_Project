@@ -56,10 +56,12 @@ from mpl_toolkits.mplot3d import Axes3D
 # ANIMATION FUNCTION
 def func(num, dataSet, line):
     # NOTE: there is no .set_data() for 3 dim data...
-    print(line)
+    # print(line)
     line.set_data(dataSet[0:2, :num])
     line.set_3d_properties(dataSet[2, :num])
-    print(line)
+    print(dataSet)
+    print(type(dataSet[0:2, :num]))
+    print(type(dataSet[2, :num]))
     return line
 
 
@@ -76,6 +78,8 @@ ax = Axes3D(fig)
 
 # NOTE: Can't pass empty arrays into 3d version of plot()
 line = plt.plot(dataSet[0], dataSet[1], dataSet[2], lw=2, c="g")[0]  # For line plot
+# print(plt.plot(dataSet[0], dataSet[1], dataSet[2], lw=2, c="g"))
+print(plt.plot(dataSet[0], dataSet[1], dataSet[2], lw=2, c="g")[0])
 
 # AXES PROPERTIES]
 # ax.set_xlim3d([limit0, limit1])
@@ -90,7 +94,7 @@ line_ani = animation.FuncAnimation(
 )
 
 # print(dataSet[0])
-func(1, dataSet, line)
+func(3, dataSet, line)
 # line_ani.save(r'AnimationNew.mp4')
 
 

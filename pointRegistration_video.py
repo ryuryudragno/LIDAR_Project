@@ -11,6 +11,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import pyautogui
 import time
 
+from sklearn import datasets
+
 import chair_parameter as param
 import read_video_csv as vd
 
@@ -306,7 +308,7 @@ def get_time(path):
     return timestamp_arr
 
 
-def plot(pcds_array, i):
+def plot(pcds_array, i, outlier):
     # グラフの枠を作成
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -316,9 +318,14 @@ def plot(pcds_array, i):
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
     col = np.arange(30)
+    # pcds_array[i] = np.where((pcds_array[i][2] < 0), pcds_array[i], outlier)
+    # # axisで行か列かを指定できる
+    # pcds_array[i] = pcds_array[i][:, np.all(pcds_array[i] != outlier, axis=0)]
 
     # X,Y,Z軸にラベルを設定
-    ax.set_zlim(-0.4, 0.8)
+    ax.set_xlim3d(-0.2, 1.8)
+    ax.set_ylim3d(-0.2, 3.0)
+    ax.set_zlim3d(-0.4, 0.8)
     ax.view_init(elev=30, azim=45)
     # .plotで描画
     ax.scatter(
@@ -334,7 +341,7 @@ def plot(pcds_array, i):
 
     # # 最後に.show()を書いてグラフ表示
     plt.show()
-    time.sleep(0.1)
+    time.sleep(0.05)
     pyautogui.press(["q"])
     # plt.clf()
 
@@ -342,16 +349,17 @@ def plot(pcds_array, i):
 if __name__ == "__main__":
     agentNum = 4
     timestep = 50
-    path = "datasets_lidar/spinningCrane"
+    # 0→spinningCrane,1→oscillating
+    n = 0
+    path = vd.read_timestep[n]
     time_arr = get_time(path)
     # print(time_arr)
     # print(len(time_arr))
 
     voxel_size = 0.05  # means 5cm for the dataset
-    # 0→spinningCrane,1→oscillating
-    n = 0
+
     sources, pcds_down = prepare_dataset(voxel_size, n, time_arr)
-    prepare_dataset(voxel_size, n, time_arr)
+    print(pcds_down)
 
     # 入力の点群を準備したやつ表示
     # print("\npcd_downsは\n")
@@ -411,6 +419,7 @@ if __name__ == "__main__":
         #     lookat=[0, 0, 0],
         #     up=[-0.2779, -0.282, 0.2556],
         # )
+        print(pcd_combined_down)
         pcd_array = []
         X = []
         Y = []
@@ -435,22 +444,34 @@ if __name__ == "__main__":
     # print(len(pcd_combined_down.points))
     print(pcds_array[49][0] == X)
 
+    # plot each time(First press q, then it works automatically)
     for index in range(len(pcds_array)):
-        plot(pcds_array, index)
+        plot(pcds_array, index, param.outlier)
+    # for index in range(len(pcds_array)):
+    #     plot(pcds_array, index)
+
     # # ここからアニメ
-    # # ANIMATION FUNCTION
-    # def func(num):
+    # def func(num, dataSet, scatters):
     #     # NOTE: there is no .set_data() for 3 dim data...
-    #     return ax.plot(
-    #         dataSet[num][1],
-    #         dataSet[num][2],
-    #         dataSet[num][3],
-    #         marker="o",
-    #         linestyle="None",
-    #     )
+    #     # print(line)
+    #     for i in range(dataSet[0].shape[0]):
+    #         scatters[i]._offsets3d = (
+    #             dataSet[num][0:1],
+    #             dataSet[num][1:2],
+    #             dataSet[num][2:],
+    #         )
+    #     return scatters
+    #     # a = np.array(dataSet[num][2], dtype=object)
+    #     # print(type(a))
+    #     # line.set_3d_properties(a)
+
+    #     # print(type(dataSet[num][0:2]))
+    #     # print(type(np.array(dataSet[num][2])))
+    #     return line
 
     # # THE DATA POINTS
-    # dataSet = pcds_array
+    # dataSet = np.array(pcds_array, dtype=object)
+    # # print(type(dataSet))
     # numDataPoints = len(pcds_array)
 
     # # GET SOME MATPLOTLIB OBJECTS
@@ -458,7 +479,12 @@ if __name__ == "__main__":
     # ax = Axes3D(fig)
 
     # # NOTE: Can't pass empty arrays into 3d version of plot()
-    # # line = plt.plot(dataSet[][0], dataSet[1], dataSet[2], lw=2, c="g")[0]  # For line plot
+    # scatters = [
+    #     ax.scatter(dataSet[0][0:1], dataSet[0][1:2], dataSet[0][2:], lw=2, c="g")
+    # ]
+    # # For line plot
+    # # print(plt.plot(dataSet[0], dataSet[1], dataSet[2], lw=2, c="g"))
+    # # print(plt.plot(dataSet[0], dataSet[1], dataSet[2], lw=2, c="g")[0])
 
     # # AXES PROPERTIES]
     # # ax.set_xlim3d([limit0, limit1])
@@ -469,8 +495,24 @@ if __name__ == "__main__":
 
     # # Creating the Animation object
     # line_ani = animation.FuncAnimation(
-    #     fig, func, frames=50, fargs=(dataSet), interval=50, blit=False
+    #     fig,
+    #     func,
+    #     frames=numDataPoints,
+    #     fargs=(dataSet, scatters),
+    #     interval=50,
+    #     blit=False,
     # )
-    # # line_ani.save(r'AnimationNew.mp4')
 
-    # plt.show()
+    # # print(dataSet[0])
+    # # func(3, dataSet, scatters)
+    # # line_ani.save("AnimationNew.mp4")
+    # Writer = animation.writers["ffmpeg"]
+    # writer = Writer(
+    #     fps=30,
+    #     metadata=dict(artist="Me"),
+    #     bitrate=1800,
+    #     extra_args=["-vcodec", "libx264"],
+    # )
+    # line_ani.save("3d-scatted-animated.mp4", writer=writer)
+
+    # # plt.show()

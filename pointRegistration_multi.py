@@ -330,6 +330,7 @@ if __name__ == "__main__":
         pcd_combined += pcds_down[point_id]
 
     pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
+    print(pcd_combined_down)
     # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
     o3.visualization.draw_geometries(
         [pcd_combined_down],
