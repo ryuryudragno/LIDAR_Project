@@ -334,8 +334,11 @@ def plot(pcds_array, i, outlier):
         pcds_array[i][2],
         marker="o",
         linestyle="None",
-        c=np.arange(len(pcds_array[i][2])),
-        cmap="ocean",
+        c=[
+            1 if pcds_array[i][2][j] < -0.15 else 0
+            for j in range(len(pcds_array[i][2]))
+        ],
+        # cmap="ocean",
     )
     # print(pcds_array[i][2])
 

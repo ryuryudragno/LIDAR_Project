@@ -24,7 +24,7 @@ x_max_102 = 2
 x_min_103 = -2.5
 x_max_103 = 0.5
 
-z_min_common = 0
+z_min_common = -1
 z_min_100 = z_min_common  # -0.25
 z_min_101 = z_min_common  # -0.15
 z_min_102 = z_min_common  # -0.35
