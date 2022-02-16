@@ -278,14 +278,14 @@ def Alpha(pcd_combined_down, alpha):
         pcd_combined_down, alpha
     )
     mesh.compute_vertex_normals()
-    o3.visualization.draw_geometries(
-        [mesh],
-        mesh_show_back_face=True,
-        zoom=0.5158999999999998,
-        front=[-0.77920625806744848, -0.57987940671965754, 0.23786021325766751],
-        lookat=[-0.12481240763005762, 1.0039607063096871, 0.81194244371714996],
-        up=[0.19116025605760037, 0.1415469754318206, 0.97129923826290332],
-    )
+    # o3.visualization.draw_geometries(
+    #     [mesh],
+    #     mesh_show_back_face=True,
+    #     zoom=0.5158999999999998,
+    #     front=[-0.77920625806744848, -0.57987940671965754, 0.23786021325766751],
+    #     lookat=[-0.12481240763005762, 1.0039607063096871, 0.81194244371714996],
+    #     up=[0.19116025605760037, 0.1415469754318206, 0.97129923826290332],
+    # )
 
     # # look for good alpha
     # LookForAlpha(pcd_combined_down, alpha)
@@ -383,18 +383,16 @@ if __name__ == "__main__":
     voxel_size = 0.02  # means 5cm for the dataset
     # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
     # 6→rubbishBin_bricks,7→two_Bricks
-    n = 7
+    n = 3
     sources, pcds_down = prepare_dataset(voxel_size, n)
 
-    # 入力の点群を準備したやつ表示
-    print("\npcd_downsは\n")
-    print(pcds_down)
+    print("Before preprocessing ...")
     # o3.visualization.draw_geometries(
     #     pcds_down,
-    #     zoom=0.5559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
+    #     zoom=0.5158999999999998,
+    #     front=[-0.77920625806744848, -0.57987940671965754, 0.23786021325766751],
+    #     lookat=[-0.12481240763005762, 1.0039607063096871, 0.81194244371714996],
+    #     up=[0.19116025605760037, 0.1415469754318206, 0.97129923826290332],
     # )
 
     # # 5
@@ -435,20 +433,20 @@ if __name__ == "__main__":
 
     pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
     print(pcd_combined_down)
-    # o3.visualization.draw_geometries(
-    #     [pcd_combined_down],
-    #     width=1920,
-    #     height=720,
-    #     left=50,
-    #     top=50,
-    #     point_show_normal=False,
-    #     mesh_show_wireframe=False,
-    #     mesh_show_back_face=False,
-    #     zoom=0.6559,
-    #     front=[-0.5452, -0.736, -0.3011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.2556],
-    # )
+    o3.visualization.draw_geometries(
+        [pcd_combined_down],
+        # width=1920,
+        # height=720,
+        left=50,
+        top=50,
+        point_show_normal=False,
+        mesh_show_wireframe=False,
+        mesh_show_back_face=False,
+        zoom=0.78190000000000004,
+        front=[-0.50022870208461867, 0.74264254806709906, 0.44525643331808762],
+        lookat=[1.1721829566284132, 1.5976718356891839, -0.31953885726192527],
+        up=[0.17665673501636506, -0.41587238921020825, 0.89210008063330581],
+    )
 
     # # Alpha shapes
     alpha = 0.025
