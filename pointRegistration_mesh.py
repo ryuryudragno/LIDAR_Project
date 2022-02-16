@@ -1,4 +1,5 @@
 import statistics
+from matplotlib import pyplot as plt
 from numpy.lib.utils import source
 import pandas as pd
 import open3d as o3
@@ -272,6 +273,56 @@ def execute_global_registration(
     return result
 
 
+def Poisson(pcd_combined_down):
+    with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
+        mesh, densities = o3.geometry.TriangleMesh.create_from_point_cloud_poisson(
+            pcd_combined_down, depth=6
+        )
+    print(mesh)
+    o3.visualization.draw_geometries(
+        [mesh],
+        zoom=0.664,
+        front=[-0.5452, -0.736, -0.3011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.2556],
+    )
+    return mesh, densities
+
+
+def VisualizeDensity(mesh, densities):
+    densities = np.asarray(densities)
+    density_colors = plt.get_cmap("plasma")(
+        (densities - densities.min()) / (densities.max() - densities.min())
+    )
+    density_colors = density_colors[:, :3]
+    density_mesh = o3.geometry.TriangleMesh()
+    density_mesh.vertices = mesh.vertices
+    density_mesh.triangles = mesh.triangles
+    density_mesh.triangle_normals = mesh.triangle_normals
+    density_mesh.vertex_colors = o3.utility.Vector3dVector(density_colors)
+    o3.visualization.draw_geometries(
+        [density_mesh],
+        zoom=0.664,
+        front=[-0.4761, -0.4698, -0.7434],
+        lookat=[1.8900, 3.2596, 0.9284],
+        up=[0.2304, -0.8825, 0.4101],
+    )
+    return densities
+
+
+def RemoveLowDensity(mesh, densities):
+    vertices_to_remove = densities < np.quantile(densities, 0.7)
+    mesh.remove_vertices_by_mask(vertices_to_remove)
+    print(mesh)
+    o3.visualization.draw_geometries(
+        [mesh],
+        zoom=0.664,
+        front=[-0.5452, -0.736, -0.3011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.2556],
+    )
+
+
 if __name__ == "__main__":
     voxel_size = 0.02  # means 5cm for the dataset
     # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
@@ -319,9 +370,6 @@ if __name__ == "__main__":
 
     # # 7
     print("Transform points and display")
-    # print(pose_graph.nodes)
-    # print("\n")
-    # print(pose_graph.edges)
     pcd_combined = o3.geometry.PointCloud()
     for point_id in range(len(pcds_down)):
         print(pose_graph.nodes[point_id].pose)
@@ -331,25 +379,79 @@ if __name__ == "__main__":
 
     pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
     print(pcd_combined_down)
-    # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
-    o3.visualization.draw_geometries(
-        [pcd_combined_down],
-        width=1920,
-        height=720,
-        left=50,
-        top=50,
-        point_show_normal=False,
-        mesh_show_wireframe=False,
-        mesh_show_back_face=False,
-        zoom=0.6559,
-        front=[-0.5452, -0.736, -0.3011],
-        lookat=[0, 0, 0],
-        up=[-0.2779, -0.282, 0.2556],
-    )
-    # o3.visualization.draw_geometries_with_animation_callback(
+    # o3.visualization.draw_geometries(
     #     [pcd_combined_down],
     #     width=1920,
     #     height=720,
     #     left=50,
     #     top=50,
+    #     point_show_normal=False,
+    #     mesh_show_wireframe=False,
+    #     mesh_show_back_face=False,
+    #     zoom=0.6559,
+    #     front=[-0.5452, -0.736, -0.3011],
+    #     lookat=[0, 0, 0],
+    #     up=[-0.2779, -0.282, 0.2556],
     # )
+
+    # # Alpha shapes
+    alpha = 0.025
+    print(f"alpha={alpha:.3f}")
+    mesh = o3.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
+        pcd_combined_down, alpha
+    )
+    mesh.compute_vertex_normals()
+    # o3.visualization.draw_geometries(
+    #     [mesh],
+    #     mesh_show_back_face=True,
+    #     zoom=0.6559,
+    #     front=[-0.5452, -0.736, -0.3011],
+    #     lookat=[0, 0, 0],
+    #     up=[-0.2779, -0.282, 0.2556],
+    # )
+
+    # # look for good alpha
+    # tetra_mesh, pt_map = o3.geometry.TetraMesh.create_from_point_cloud(
+    #     pcd_combined_down
+    # )
+    # for alpha in np.logspace(np.log10(0.5), np.log10(0.01), num=5):
+    #     print(f"alpha={alpha:.3f}")
+    #     mesh = o3.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
+    #         pcd_combined_down, alpha, tetra_mesh, pt_map
+    #     )
+    #     mesh.compute_vertex_normals()
+    #     o3.visualization.draw_geometries(
+    #         [mesh],
+    #         mesh_show_back_face=True,
+    #         zoom=0.6559,
+    #         front=[-0.5452, -0.736, -0.3011],
+    #         lookat=[0, 0, 0],
+    #         up=[-0.2779, -0.282, 0.2556],
+    #     )
+
+    # # Ball pivoting
+    # pcd = mesh.sample_points_poisson_disk(3000)
+
+    # radii = [0.02, 0.03, 0.04, 0.05]
+    # rec_mesh = o3.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
+    #     pcd, o3.utility.DoubleVector(radii)
+    # )
+    # o3.visualization.draw_geometries(
+    #     [pcd, rec_mesh],
+    #     zoom=0.6559,
+    #     front=[-0.5452, -0.736, -0.3011],
+    #     lookat=[0, 0, 0],
+    #     up=[-0.2779, -0.282, 0.2556],
+    # )
+
+    ##
+    # # Poisson surface reconstruction
+    print("run Poisson surface reconstruction")
+    mesh, densities = Poisson(pcd_combined_down)
+
+    # # 密度を視覚化
+    print("visualize densities")
+    densities = VisualizeDensity(mesh, densities)
+
+    print("remove low density vertices")
+    RemoveLowDensity(mesh, densities)
