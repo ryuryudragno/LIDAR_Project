@@ -273,6 +273,62 @@ def execute_global_registration(
     return result
 
 
+def Alpha(pcd_combined_down, alpha):
+    mesh = o3.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
+        pcd_combined_down, alpha
+    )
+    mesh.compute_vertex_normals()
+    o3.visualization.draw_geometries(
+        [mesh],
+        mesh_show_back_face=True,
+        zoom=0.5158999999999998,
+        front=[-0.77920625806744848, -0.57987940671965754, 0.23786021325766751],
+        lookat=[-0.12481240763005762, 1.0039607063096871, 0.81194244371714996],
+        up=[0.19116025605760037, 0.1415469754318206, 0.97129923826290332],
+    )
+
+    # # look for good alpha
+    # LookForAlpha(pcd_combined_down, alpha)
+
+    return mesh
+
+
+def LookForAlpha(pcd_combined_down, alpha):
+    tetra_mesh, pt_map = o3.geometry.TetraMesh.create_from_point_cloud(
+        pcd_combined_down
+    )
+    for alpha in np.logspace(np.log10(0.1), np.log10(0.015), num=4):
+        print(f"alpha={alpha:.3f}")
+        mesh = o3.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
+            pcd_combined_down, alpha, tetra_mesh, pt_map
+        )
+        mesh.compute_vertex_normals()
+        o3.visualization.draw_geometries(
+            [mesh],
+            mesh_show_back_face=True,
+            zoom=0.6559,
+            front=[-0.5452, -0.736, -0.3011],
+            lookat=[0, 0, 0],
+            up=[-0.2779, -0.282, 0.2556],
+        )
+
+
+def BallPivot(mesh):
+    pcd = mesh.sample_points_poisson_disk(3000)
+
+    radii = [0.02, 0.03, 0.04, 0.05]
+    rec_mesh = o3.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
+        pcd, o3.utility.DoubleVector(radii)
+    )
+    o3.visualization.draw_geometries(
+        [pcd, rec_mesh],
+        zoom=0.6559,
+        front=[-0.5452, -0.736, -0.3011],
+        lookat=[0, 0, 0],
+        up=[-0.2779, -0.282, 0.2556],
+    )
+
+
 def Poisson(pcd_combined_down):
     with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
         mesh, densities = o3.geometry.TriangleMesh.create_from_point_cloud_poisson(
@@ -327,7 +383,7 @@ if __name__ == "__main__":
     voxel_size = 0.02  # means 5cm for the dataset
     # 0→boxBinBrikets,1→box1,2→box2,3→chair,4→crane,5→rubbishBin,
     # 6→rubbishBin_bricks,7→two_Bricks
-    n = 3
+    n = 7
     sources, pcds_down = prepare_dataset(voxel_size, n)
 
     # 入力の点群を準備したやつ表示
@@ -397,61 +453,17 @@ if __name__ == "__main__":
     # # Alpha shapes
     alpha = 0.025
     print(f"alpha={alpha:.3f}")
-    mesh = o3.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
-        pcd_combined_down, alpha
-    )
-    mesh.compute_vertex_normals()
-    # o3.visualization.draw_geometries(
-    #     [mesh],
-    #     mesh_show_back_face=True,
-    #     zoom=0.6559,
-    #     front=[-0.5452, -0.736, -0.3011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.2556],
-    # )
-
-    # # look for good alpha
-    # tetra_mesh, pt_map = o3.geometry.TetraMesh.create_from_point_cloud(
-    #     pcd_combined_down
-    # )
-    # for alpha in np.logspace(np.log10(0.5), np.log10(0.01), num=5):
-    #     print(f"alpha={alpha:.3f}")
-    #     mesh = o3.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
-    #         pcd_combined_down, alpha, tetra_mesh, pt_map
-    #     )
-    #     mesh.compute_vertex_normals()
-    #     o3.visualization.draw_geometries(
-    #         [mesh],
-    #         mesh_show_back_face=True,
-    #         zoom=0.6559,
-    #         front=[-0.5452, -0.736, -0.3011],
-    #         lookat=[0, 0, 0],
-    #         up=[-0.2779, -0.282, 0.2556],
-    #     )
+    mesh = Alpha(pcd_combined_down, alpha)
 
     # # Ball pivoting
-    # pcd = mesh.sample_points_poisson_disk(3000)
+    # BallPivot(mesh)
 
-    # radii = [0.02, 0.03, 0.04, 0.05]
-    # rec_mesh = o3.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-    #     pcd, o3.utility.DoubleVector(radii)
-    # )
-    # o3.visualization.draw_geometries(
-    #     [pcd, rec_mesh],
-    #     zoom=0.6559,
-    #     front=[-0.5452, -0.736, -0.3011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.2556],
-    # )
-
-    ##
     # # Poisson surface reconstruction
-    print("run Poisson surface reconstruction")
-    mesh, densities = Poisson(pcd_combined_down)
+    # print("run Poisson surface reconstruction")
+    # mesh, densities = Poisson(pcd_combined_down)
 
-    # # 密度を視覚化
-    print("visualize densities")
-    densities = VisualizeDensity(mesh, densities)
+    # print("visualize densities")
+    # densities = VisualizeDensity(mesh, densities)
 
-    print("remove low density vertices")
-    RemoveLowDensity(mesh, densities)
+    # print("remove low density vertices")
+    # RemoveLowDensity(mesh, densities)
