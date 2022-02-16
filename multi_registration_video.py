@@ -14,7 +14,7 @@ import time
 from sklearn import datasets
 
 import chair_parameter as param
-import read_video_csv as vd
+import drafts.read_video_csv as vd
 
 # 複数点
 # http://www.open3d.org/docs/0.13.0/tutorial/pipelines/multiway_registration.html
@@ -30,10 +30,6 @@ def distance_cut(sourceData, dist_data, dist_threshold):
     distance_cut = sourceData.iloc[
         np.nonzero((dist_data < dist_threshold).values)[0], :
     ]
-    # distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
-    # preprocessed_data = distance_cut.iloc[
-    #     np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
-    # ]
 
     return distance_cut
 
@@ -85,12 +81,6 @@ def source_preprocess(
     )
     # axisで行か列かを指定できる
     sourceMatrix = sourceMatrix[:, np.all(sourceMatrix != outlier, axis=0)]
-    # medX = statistics.median(sourceMatrix[0])
-    # medY = statistics.median(sourceMatrix[1])
-    # medZ = statistics.median(sourceMatrix[2])
-    # sourceMatrix[0] = sourceMatrix[0] - medX
-    # sourceMatrix[1] = sourceMatrix[1] - medY
-    # sourceMatrix[2] = sourceMatrix[2] - medZ
 
     sourceMatrix = sourceMatrix.T
 
@@ -98,18 +88,6 @@ def source_preprocess(
     # source.transform(trans_carib)
 
     return source
-
-
-def preprocess_point_cloud(pcd, voxel_size):
-    print(":: Downsample with a voxel size %.3f." % voxel_size)
-    pcd_down = pcd.voxel_down_sample(voxel_size)
-
-    radius_normal = voxel_size * 2
-    print(":: Estimate normal with search radius %.3f." % radius_normal)
-    pcd_down.estimate_normals(
-        o3.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30)
-    )
-    return pcd_down
 
 
 def prepare_dataset(voxel_size, num, time_arr):
@@ -178,119 +156,6 @@ def prepare_dataset(voxel_size, num, time_arr):
     return sources, pcds
 
 
-def pairwise_registration(source, target):
-    print("Apply point-to-plane ICP")
-    icp_coarse = o3.pipelines.registration.registration_icp(
-        source,
-        target,
-        max_correspondence_distance_coarse,
-        np.identity(4),
-        o3.pipelines.registration.TransformationEstimationPointToPlane(),
-    )
-    icp_fine = o3.pipelines.registration.registration_icp(
-        source,
-        target,
-        max_correspondence_distance_fine,
-        icp_coarse.transformation,
-        o3.pipelines.registration.TransformationEstimationPointToPlane(),
-    )
-    transformation_icp = icp_fine.transformation
-    information_icp = (
-        o3.pipelines.registration.get_information_matrix_from_point_clouds(
-            source, target, max_correspondence_distance_fine, icp_fine.transformation
-        )
-    )
-    return transformation_icp, information_icp
-
-
-def preprocess_point_cloud(pcd, voxel_size):
-    print(":: Downsample with a voxel size %.3f." % voxel_size)
-    pcd_down = pcd.voxel_down_sample(voxel_size)
-
-    radius_normal = voxel_size * 2
-    print(":: Estimate normal with search radius %.3f." % radius_normal)
-    pcd_down.estimate_normals(
-        o3.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30)
-    )
-
-    radius_feature = voxel_size * 5
-    print(":: Compute FPFH feature with search radius %.3f." % radius_feature)
-    pcd_fpfh = o3.pipelines.registration.compute_fpfh_feature(
-        pcd_down, o3.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100)
-    )
-    return pcd_down, pcd_fpfh
-
-
-def full_registration(
-    pcds, max_correspondence_distance_coarse, max_correspondence_distance_fine
-):
-    pose_graph = o3.pipelines.registration.PoseGraph()
-    odometry = np.identity(4)
-    pose_graph.nodes.append(o3.pipelines.registration.PoseGraphNode(odometry))
-    n_pcds = len(pcds)
-
-    for source_id in range(n_pcds):
-        for target_id in range(source_id + 1, n_pcds):
-            transformation_icp, information_icp = pairwise_registration(
-                pcds[source_id], pcds[target_id]
-            )
-            print("Build o3d.pipelines.registration.PoseGraph")
-            if target_id == source_id + 1:  # odometry case
-                odometry = np.dot(transformation_icp, odometry)
-                pose_graph.nodes.append(
-                    o3.pipelines.registration.PoseGraphNode(np.linalg.inv(odometry))
-                    # 逆行列を求めている
-                )
-                pose_graph.edges.append(
-                    o3.pipelines.registration.PoseGraphEdge(
-                        source_id,
-                        target_id,
-                        transformation_icp,
-                        information_icp,
-                        uncertain=False,
-                    )
-                )
-            else:  # loop closure case
-                pose_graph.edges.append(
-                    o3.pipelines.registration.PoseGraphEdge(
-                        source_id,
-                        target_id,
-                        transformation_icp,
-                        information_icp,
-                        uncertain=True,
-                    )
-                )
-    # draw_registration_result(so, ta, res_ran.transformation)
-    return pose_graph
-
-
-def execute_global_registration(
-    source_down, target_down, source_fpfh, target_fpfh, voxel_size
-):
-    distance_threshold = voxel_size * 1.5
-    print(":: RANSAC registration on downsampled point clouds.")
-    print("   Since the downsampling voxel size is %.3f," % voxel_size)
-    print("   we use a liberal distance threshold %.3f." % distance_threshold)
-    result = o3.pipelines.registration.registration_ransac_based_on_feature_matching(
-        source_down,
-        target_down,
-        source_fpfh,
-        target_fpfh,
-        True,
-        distance_threshold,
-        o3.pipelines.registration.TransformationEstimationPointToPoint(False),
-        3,
-        [
-            o3.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-            o3.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
-                distance_threshold
-            ),
-        ],
-        o3.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999),
-    )
-    return result
-
-
 def get_time(path):
     files = os.listdir(path)
     files.sort()
@@ -353,44 +218,14 @@ if __name__ == "__main__":
     agentNum = 4
     timestep = 50
     # 0→spinningCrane,1→oscillating
-    n = 0
+    n = 1
     path = vd.read_timestep[n]
     time_arr = get_time(path)
-    # print(time_arr)
-    # print(len(time_arr))
 
     voxel_size = 0.05  # means 5cm for the dataset
 
     sources, pcds_down = prepare_dataset(voxel_size, n, time_arr)
     print(pcds_down)
-
-    # 入力の点群を準備したやつ表示
-    # print("\npcd_downsは\n")
-    # print(len(pcds_down))
-    # for pcd in pcds_down:
-    # o3.visualization.draw_geometries(
-    #     pcd,
-    #     zoom=0.5559,
-    #     front=[-0.5452, -0.836, -0.2011],
-    #     lookat=[0, 0, 0],
-    #     up=[-0.2779, -0.282, 0.1556],
-    # )
-
-    # 　　 # 一旦まだ
-    #     # # 6
-    #     print("Optimizing PoseGraph ...")
-    #     option = o3.pipelines.registration.GlobalOptimizationOption(
-    #         max_correspondence_distance=max_correspondence_distance_fine,
-    #         edge_prune_threshold=0.25,
-    #         reference_node=0,
-    #     )
-    #     with o3.utility.VerbosityContextManager(o3.utility.VerbosityLevel.Debug) as cm:
-    #         o3.pipelines.registration.global_optimization(
-    #             pose_graph,
-    #             o3.pipelines.registration.GlobalOptimizationLevenbergMarquardt(),
-    #             o3.pipelines.registration.GlobalOptimizationConvergenceCriteria(),
-    #             option,
-    #         )
 
     # # 7
     pcd_combined_down = any
@@ -407,22 +242,6 @@ if __name__ == "__main__":
             pcd_combined += pcd[point_id]
 
         pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
-        # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
-        # o3.visualization.draw_geometries(
-        #     [pcd_combined_down],
-        #     width=1920,
-        #     height=720,
-        #     left=50,
-        #     top=50,
-        #     point_show_normal=False,
-        #     mesh_show_wireframe=False,
-        #     mesh_show_back_face=False,
-        #     zoom=0.6559,
-        #     front=[-0.5452, -0.736, -0.3011],
-        #     lookat=[0, 0, 0],
-        #     up=[-0.2779, -0.282, 0.2556],
-        # )
-        print(pcd_combined_down)
         pcd_array = []
         X = []
         Y = []
@@ -437,23 +256,18 @@ if __name__ == "__main__":
         # print(len(pcd_array))
         pcds_array.append(pcd_array)
 
-    print(len(pcds_array))
-    print(len(pcds_array[0]))
+    # print(len(pcds_array))
+    # print(len(pcds_array[0]))
 
     # print(type(pcd_combined_down))
-    print(type(pcd_combined_down.points))
-    # print(type(pcd_combined_down.points[0]))
-    # print(pcd_combined_down.points[0])
-    # print(len(pcd_combined_down.points))
-    print(pcds_array[49][0] == X)
+    # print(type(pcd_combined_down.points))
+    # print(pcds_array[49][0] == X)
 
     # plot each time(First press q, then it works automatically)
     for index in range(len(pcds_array)):
         plot(pcds_array, index, param.outlier)
-    # for index in range(len(pcds_array)):
-    #     plot(pcds_array, index)
 
-    # # ここからアニメ
+    # # ここからアニメ it doen't work
     # def func(num, dataSet, scatters):
     #     # NOTE: there is no .set_data() for 3 dim data...
     #     # print(line)

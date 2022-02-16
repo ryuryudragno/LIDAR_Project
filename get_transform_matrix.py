@@ -3,10 +3,9 @@ from numpy.lib.utils import source
 import pandas as pd
 import open3d as o3
 import numpy as np
-import copy
 
 import chair_parameter as param
-import read_video_csv as vd
+import drafts.read_video_csv as vd
 
 # 複数点
 # http://www.open3d.org/docs/0.13.0/tutorial/pipelines/multiway_registration.html
@@ -22,10 +21,6 @@ def distance_cut(sourceData, dist_data, dist_threshold):
     distance_cut = sourceData.iloc[
         np.nonzero((dist_data < dist_threshold).values)[0], :
     ]
-    # distance_cut = distance_cut.iloc[np.nonzero((distance_cut["Z"] < 0.8).values)[0], :]
-    # preprocessed_data = distance_cut.iloc[
-    #     np.nonzero((distance_cut["Z"] > z_threshold).values)[0], :
-    # ]
 
     return distance_cut
 
@@ -326,7 +321,7 @@ if __name__ == "__main__":
         pcds_down[point_id].transform(pose_graph.nodes[point_id].pose)
         pcd_combined += pcds_down[point_id]
     pcd_combined_down = pcd_combined.voxel_down_sample(voxel_size=voxel_size)
-
+    # o3.io.write_point_cloud("multiway_registration.pcd", pcd_combined_down)
     o3.visualization.draw_geometries(
         [pcd_combined_down],
         width=1920,
