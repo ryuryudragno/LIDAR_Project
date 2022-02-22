@@ -211,7 +211,6 @@ def plot(pcds_array, i, outlier):
     plt.show()
     time.sleep(0.05)
     pyautogui.press(["q"])
-    # plt.clf()
 
 
 if __name__ == "__main__":
